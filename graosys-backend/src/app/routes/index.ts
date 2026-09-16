@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authMiddleware, requireRole } from "../middlewares/authMiddleware";
+import { authMiddleware, requireRole, requirePermission } from "../middlewares/authMiddleware";
 import { SessionController } from "../controllers/SessionController";
 import { TenantController } from "../controllers/TenantController";
 import { UserController } from "../controllers/UserController";
@@ -48,29 +48,29 @@ router.patch("/api/users/:id", requireRole("admin"), user.update);
 router.delete("/api/users/:id", requireRole("admin"), user.delete);
 
 // Clientes
-router.get("/api/clients", client.getAll);
-router.get("/api/clients/:id", client.getById);
-router.get("/api/clients/cnpj/:cnpj_cpf", client.getByCnpjCpf);
-router.post("/api/clients", client.create);
-router.patch("/api/clients/:id", client.update);
+router.get("/api/clients", requirePermission("clients", "view"), client.getAll);
+router.get("/api/clients/:id", requirePermission("clients", "view"), client.getById);
+router.get("/api/clients/cnpj/:cnpj_cpf", requirePermission("clients", "view"), client.getByCnpjCpf);
+router.post("/api/clients", requirePermission("clients", "create"), client.create);
+router.patch("/api/clients/:id", requirePermission("clients", "edit"), client.update);
 router.delete("/api/clients/:id", requireRole("admin"), client.delete);
 
 // Contratos de grãos
-router.get("/api/contracts/report", contract.getReport);
-router.get("/api/contracts", contract.getAll);
-router.get("/api/contracts/:id", contract.getById);
-router.post("/api/contracts", contract.create);
-router.patch("/api/contracts/:id", contract.update);
-router.patch("/api/contracts/:id/status", contract.updateStatus);
+router.get("/api/contracts/report", requirePermission("reports", "view"), contract.getReport);
+router.get("/api/contracts", requirePermission("contracts", "view"), contract.getAll);
+router.get("/api/contracts/:id", requirePermission("contracts", "view"), contract.getById);
+router.post("/api/contracts", requirePermission("contracts", "create"), contract.create);
+router.patch("/api/contracts/:id", requirePermission("contracts", "edit"), contract.update);
+router.patch("/api/contracts/:id/status", requirePermission("execution", "edit"), contract.updateStatus);
 router.delete("/api/contracts/:id", requireRole("admin"), contract.delete);
 
 // Recebimentos (Cobrança)
-router.get("/api/billings/summary", billing.getSummary);
-router.get("/api/billings", billing.getAll);
-router.get("/api/billings/:id", billing.getById);
-router.get("/api/billings/contract/:number_contract", billing.getByNumberContract);
-router.post("/api/billings", billing.create);
-router.patch("/api/billings/:id", billing.update);
+router.get("/api/billings/summary", requirePermission("billing", "view"), billing.getSummary);
+router.get("/api/billings", requirePermission("billing", "view"), billing.getAll);
+router.get("/api/billings/:id", requirePermission("billing", "view"), billing.getById);
+router.get("/api/billings/contract/:number_contract", requirePermission("billing", "view"), billing.getByNumberContract);
+router.post("/api/billings", requirePermission("billing", "create"), billing.create);
+router.patch("/api/billings/:id", requirePermission("billing", "edit"), billing.update);
 router.delete("/api/billings/:id", requireRole("admin"), billing.delete);
 
 // Produtos (Admin)
@@ -81,8 +81,8 @@ router.patch("/api/products/:id", requireRole("admin"), product.update);
 router.delete("/api/products/:id", requireRole("admin"), product.delete);
 
 // Email
-router.post("/api/email/send-contract", email.sendContractEmail);
-router.post("/api/email/send-custom", email.sendCustomEmail);
+router.post("/api/email/send-contract", requirePermission("contracts", "view"), email.sendContractEmail);
+router.post("/api/email/send-custom", requireRole("admin"), email.sendCustomEmail);
 
 // Mesas de produtos (Admin)
 router.get("/api/product-tables", productTable.getAll);

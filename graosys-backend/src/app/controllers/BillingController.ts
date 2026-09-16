@@ -1,11 +1,19 @@
 import { Request, Response } from "express";
 import { AppDataSource } from "../../database/data-source";
 import { Billing } from "../entities/Billing";
+import { pickFields } from "../../utils/pickFields";
+
+const ALLOWED_FIELDS: (keyof Billing)[] = [
+  "number_contract", "number_broker", "product_name", "year", "receipt_date",
+  "internal_receipt_number", "rps_number", "nfs_number", "total_service_value", "irrf_value",
+  "adjustment_value", "liquid_value", "expected_receipt_date", "liquid_contract_date", "status",
+  "observation",
+];
 
 export class BillingController {
   async create(req: Request, res: Response) {
     const billingRepo = AppDataSource.getRepository(Billing);
-    const billing = billingRepo.create({ ...req.body, tenant_id: req.user.tenant_id, owner_record: req.user.name });
+    const billing = billingRepo.create({ ...pickFields<Billing>(req.body, ALLOWED_FIELDS), tenant_id: req.user.tenant_id, owner_record: req.user.name });
     await billingRepo.save(billing);
     return res.status(201).json(billing);
   }
@@ -45,7 +53,7 @@ export class BillingController {
     const billingRepo = AppDataSource.getRepository(Billing);
     const billing = await billingRepo.findOne({ where: { id: req.params.id, tenant_id: req.user.tenant_id } });
     if (!billing) return res.status(404).json({ error: "Recebimento não encontrado" });
-    Object.assign(billing, req.body);
+    Object.assign(billing, pickFields<Billing>(req.body, ALLOWED_FIELDS));
     await billingRepo.save(billing);
     return res.json(billing);
   }

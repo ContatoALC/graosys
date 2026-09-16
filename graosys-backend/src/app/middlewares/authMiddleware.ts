@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { JWT_SECRET } from "../../config/jwtSecret";
 
 interface TokenPayload {
   id: string;
@@ -29,7 +30,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
 
   const [, token] = authHeader.split(" ");
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "secret") as TokenPayload;
+    const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
     req.user = decoded;
     return next();
   } catch {
@@ -41,6 +42,17 @@ export function requireRole(...roles: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({ error: "Acesso negado" });
+    }
+    return next();
+  };
+}
+
+export function requirePermission(module: string, action: string) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (req.user.role === "admin") return next();
+    const modulePermissions = req.user.permissions?.[module] || [];
+    if (!modulePermissions.includes(action)) {
+      return res.status(403).json({ error: "Você não tem permissão para esta ação" });
     }
     return next();
   };

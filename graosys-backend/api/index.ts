@@ -1,8 +1,10 @@
 import dotenv from "dotenv";
 import app from "../src/app";
 import { AppDataSource, initializeDataSource } from "../src/database/data-source";
+import { validateEnv } from "../src/config/validateEnv";
 
 dotenv.config();
+validateEnv();
 
 let dbReady: Promise<unknown> | null = null;
 

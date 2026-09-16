@@ -1,8 +1,31 @@
 import { Request, Response } from "express";
 import nodemailer from "nodemailer";
+import sanitizeHtml from "sanitize-html";
 import { AppDataSource } from "../../database/data-source";
 import { Tenant } from "../entities/Tenant";
 import { GrainContract } from "../entities/GrainContract";
+
+function escapeHtml(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+const EMAIL_BODY_SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
+  allowedTags: [
+    "p", "br", "strong", "b", "em", "i", "u", "ul", "ol", "li", "h1", "h2", "h3", "h4",
+    "table", "thead", "tbody", "tr", "td", "th", "span", "div", "a", "hr", "blockquote",
+  ],
+  allowedAttributes: {
+    a: ["href", "title", "target"],
+    "*": ["style"],
+  },
+  allowedSchemes: ["http", "https", "mailto"],
+};
 
 export class EmailController {
   private async getTransporter(tenant: Tenant) {
@@ -97,12 +120,13 @@ export class EmailController {
     if (!tenant) return res.status(404).json({ error: "Corretora não encontrada" });
 
     const transporter = await this.getTransporter(tenant);
+    const safeBody = sanitizeHtml(body, EMAIL_BODY_SANITIZE_OPTIONS);
 
     await transporter.sendMail({
       from: `"${tenant.name}" <${process.env.SMTP_USER}>`,
       to: Array.isArray(to) ? to : [to],
       subject,
-      html: body,
+      html: safeBody,
     });
 
     return res.json({ message: "E-mail enviado com sucesso!" });
@@ -110,35 +134,50 @@ export class EmailController {
 }
 
 function buildContractHtml(contract: GrainContract, tenant: Tenant) {
-  return (role: string, recipientName: string) => `
+  return (role: string, recipientName: string) => {
+    const tenantName = escapeHtml(tenant.name);
+    const numberContract = escapeHtml(contract.number_contract);
+    const nameProduct = escapeHtml(contract.name_product);
+    const crop = escapeHtml(contract.crop);
+    const typeQuantity = escapeHtml(contract.type_quantity);
+    const typeCurrency = escapeHtml(contract.type_currency);
+    const payment = escapeHtml(contract.payment || "—");
+    const pickupLocation = escapeHtml(contract.pickup_location || "—");
+    const initialPickupDate = escapeHtml(contract.initial_pickup_date || "—");
+    const finalPickupDate = escapeHtml(contract.final_pickup_date || "—");
+    const observation = escapeHtml(contract.observation);
+    const safeRole = escapeHtml(role);
+    const safeRecipientName = escapeHtml(recipientName);
+
+    return `
     <div style="font-family: Arial, sans-serif; color: #1a1a1a; font-size: 14px; line-height: 1.6; max-width: 600px;">
       <div style="background: #f59e0b; padding: 16px 24px; border-radius: 8px 8px 0 0;">
-        <h2 style="margin: 0; color: #1a1a1a; font-size: 18px;">${tenant.name}</h2>
+        <h2 style="margin: 0; color: #1a1a1a; font-size: 18px;">${tenantName}</h2>
         <p style="margin: 4px 0 0; color: #78350f; font-size: 12px;">Corretora de Grãos</p>
       </div>
 
       <div style="padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
-        <p>Para <strong>${recipientName}</strong>,</p>
+        <p>Para <strong>${safeRecipientName}</strong>,</p>
 
-        <p>Segue abaixo os detalhes do contrato <strong>${contract.number_contract}</strong> na condição de <strong>${role}</strong>:</p>
+        <p>Segue abaixo os detalhes do contrato <strong>${numberContract}</strong> na condição de <strong>${safeRole}</strong>:</p>
 
         <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px;">
-          <tr style="background: #fef3c7;"><td style="padding: 8px 12px; font-weight: bold; border: 1px solid #fde68a;">Nº Contrato</td><td style="padding: 8px 12px; border: 1px solid #fde68a;">${contract.number_contract}</td></tr>
-          <tr><td style="padding: 8px 12px; font-weight: bold; border: 1px solid #e5e7eb;">Produto</td><td style="padding: 8px 12px; border: 1px solid #e5e7eb;">${contract.name_product}</td></tr>
-          <tr style="background: #f9fafb;"><td style="padding: 8px 12px; font-weight: bold; border: 1px solid #e5e7eb;">Safra</td><td style="padding: 8px 12px; border: 1px solid #e5e7eb;">${contract.crop}</td></tr>
-          <tr><td style="padding: 8px 12px; font-weight: bold; border: 1px solid #e5e7eb;">Quantidade</td><td style="padding: 8px 12px; border: 1px solid #e5e7eb;">${contract.quantity} ${contract.type_quantity}</td></tr>
-          <tr style="background: #f9fafb;"><td style="padding: 8px 12px; font-weight: bold; border: 1px solid #e5e7eb;">Preço</td><td style="padding: 8px 12px; border: 1px solid #e5e7eb;">${contract.type_currency} ${Number(contract.price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} /${contract.type_quantity}</td></tr>
-          <tr><td style="padding: 8px 12px; font-weight: bold; border: 1px solid #e5e7eb;">Pagamento</td><td style="padding: 8px 12px; border: 1px solid #e5e7eb;">${contract.payment || "—"}</td></tr>
-          <tr style="background: #f9fafb;"><td style="padding: 8px 12px; font-weight: bold; border: 1px solid #e5e7eb;">Retirada</td><td style="padding: 8px 12px; border: 1px solid #e5e7eb;">${contract.pickup_location || "—"}</td></tr>
-          <tr><td style="padding: 8px 12px; font-weight: bold; border: 1px solid #e5e7eb;">Período</td><td style="padding: 8px 12px; border: 1px solid #e5e7eb;">${contract.initial_pickup_date || "—"} a ${contract.final_pickup_date || "—"}</td></tr>
-          ${contract.observation ? `<tr style="background: #f9fafb;"><td style="padding: 8px 12px; font-weight: bold; border: 1px solid #e5e7eb;">Observação</td><td style="padding: 8px 12px; border: 1px solid #e5e7eb;">${contract.observation}</td></tr>` : ""}
+          <tr style="background: #fef3c7;"><td style="padding: 8px 12px; font-weight: bold; border: 1px solid #fde68a;">Nº Contrato</td><td style="padding: 8px 12px; border: 1px solid #fde68a;">${numberContract}</td></tr>
+          <tr><td style="padding: 8px 12px; font-weight: bold; border: 1px solid #e5e7eb;">Produto</td><td style="padding: 8px 12px; border: 1px solid #e5e7eb;">${nameProduct}</td></tr>
+          <tr style="background: #f9fafb;"><td style="padding: 8px 12px; font-weight: bold; border: 1px solid #e5e7eb;">Safra</td><td style="padding: 8px 12px; border: 1px solid #e5e7eb;">${crop}</td></tr>
+          <tr><td style="padding: 8px 12px; font-weight: bold; border: 1px solid #e5e7eb;">Quantidade</td><td style="padding: 8px 12px; border: 1px solid #e5e7eb;">${contract.quantity} ${typeQuantity}</td></tr>
+          <tr style="background: #f9fafb;"><td style="padding: 8px 12px; font-weight: bold; border: 1px solid #e5e7eb;">Preço</td><td style="padding: 8px 12px; border: 1px solid #e5e7eb;">${typeCurrency} ${Number(contract.price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} /${typeQuantity}</td></tr>
+          <tr><td style="padding: 8px 12px; font-weight: bold; border: 1px solid #e5e7eb;">Pagamento</td><td style="padding: 8px 12px; border: 1px solid #e5e7eb;">${payment}</td></tr>
+          <tr style="background: #f9fafb;"><td style="padding: 8px 12px; font-weight: bold; border: 1px solid #e5e7eb;">Retirada</td><td style="padding: 8px 12px; border: 1px solid #e5e7eb;">${pickupLocation}</td></tr>
+          <tr><td style="padding: 8px 12px; font-weight: bold; border: 1px solid #e5e7eb;">Período</td><td style="padding: 8px 12px; border: 1px solid #e5e7eb;">${initialPickupDate} a ${finalPickupDate}</td></tr>
+          ${contract.observation ? `<tr style="background: #f9fafb;"><td style="padding: 8px 12px; font-weight: bold; border: 1px solid #e5e7eb;">Observação</td><td style="padding: 8px 12px; border: 1px solid #e5e7eb;">${observation}</td></tr>` : ""}
         </table>
 
         <p>Solicitamos confirmar o recebimento deste e-mail respondendo a esta mensagem.</p>
 
         <p>Agradecemos a parceria e nos colocamos à disposição.</p>
 
-        <p style="margin-top: 24px;">Atenciosamente,<br/><strong>${tenant.name}</strong></p>
+        <p style="margin-top: 24px;">Atenciosamente,<br/><strong>${tenantName}</strong></p>
       </div>
 
       <p style="font-size: 11px; color: #9ca3af; text-align: center; margin-top: 16px;">
@@ -146,4 +185,5 @@ function buildContractHtml(contract: GrainContract, tenant: Tenant) {
       </p>
     </div>
   `;
+  };
 }

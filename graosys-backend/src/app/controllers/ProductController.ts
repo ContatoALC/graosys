@@ -2,13 +2,20 @@ import { Request, Response } from "express";
 import { AppDataSource } from "../../database/data-source";
 import { Product } from "../entities/Product";
 import { ProductTable } from "../entities/ProductTable";
+import { pickFields } from "../../utils/pickFields";
+
+const PRODUCT_ALLOWED_FIELDS: (keyof Product)[] = [
+  "product_type", "name", "commission_seller", "type_commission_seller", "quality", "observation",
+];
+
+const PRODUCT_TABLE_ALLOWED_FIELDS: (keyof ProductTable)[] = ["name", "product", "crop", "description", "prices"];
 
 export class ProductController {
   async create(req: Request, res: Response) {
     const productRepo = AppDataSource.getRepository(Product);
     const existing = await productRepo.findOne({ where: { product_type: req.body.product_type, tenant_id: req.user.tenant_id } });
     if (existing) return res.status(400).json({ error: "Produto com este código já existe" });
-    const product = productRepo.create({ ...req.body, tenant_id: req.user.tenant_id });
+    const product = productRepo.create({ ...pickFields<Product>(req.body, PRODUCT_ALLOWED_FIELDS), tenant_id: req.user.tenant_id });
     await productRepo.save(product);
     return res.status(201).json(product);
   }
@@ -30,7 +37,7 @@ export class ProductController {
     const productRepo = AppDataSource.getRepository(Product);
     const product = await productRepo.findOne({ where: { id: req.params.id, tenant_id: req.user.tenant_id } });
     if (!product) return res.status(404).json({ error: "Produto não encontrado" });
-    Object.assign(product, req.body);
+    Object.assign(product, pickFields<Product>(req.body, PRODUCT_ALLOWED_FIELDS));
     await productRepo.save(product);
     return res.json(product);
   }
@@ -47,7 +54,7 @@ export class ProductController {
 export class ProductTableController {
   async create(req: Request, res: Response) {
     const tableRepo = AppDataSource.getRepository(ProductTable);
-    const table = tableRepo.create({ ...req.body, tenant_id: req.user.tenant_id });
+    const table = tableRepo.create({ ...pickFields<ProductTable>(req.body, PRODUCT_TABLE_ALLOWED_FIELDS), tenant_id: req.user.tenant_id });
     await tableRepo.save(table);
     return res.status(201).json(table);
   }
@@ -69,7 +76,7 @@ export class ProductTableController {
     const tableRepo = AppDataSource.getRepository(ProductTable);
     const table = await tableRepo.findOne({ where: { id: req.params.id, tenant_id: req.user.tenant_id } });
     if (!table) return res.status(404).json({ error: "Mesa não encontrada" });
-    Object.assign(table, req.body);
+    Object.assign(table, pickFields<ProductTable>(req.body, PRODUCT_TABLE_ALLOWED_FIELDS));
     await tableRepo.save(table);
     return res.json(table);
   }

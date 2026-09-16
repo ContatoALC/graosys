@@ -3,6 +3,7 @@ import { AppDataSource } from "../../database/data-source";
 import { User } from "../entities/User";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { JWT_SECRET } from "../../config/jwtSecret";
 
 export class SessionController {
   async login(req: Request, res: Response) {
@@ -16,6 +17,10 @@ export class SessionController {
     const user = await userRepo.findOne({
       where: { email },
       relations: ["tenant"],
+      select: {
+        id: true, tenant_id: true, name: true, email: true, password: true,
+        role: true, permissions: true, active: true,
+      },
     });
 
     if (!user || !user.active) {
@@ -42,7 +47,7 @@ export class SessionController {
         tenant_name: user.tenant?.name,
         permissions: user.permissions,
       },
-      process.env.JWT_SECRET || "secret",
+      JWT_SECRET,
       { expiresIn: "8h" }
     );
 
@@ -65,7 +70,10 @@ export class SessionController {
     const { id } = req.user;
 
     const userRepo = AppDataSource.getRepository(User);
-    const user = await userRepo.findOne({ where: { id } });
+    const user = await userRepo.findOne({
+      where: { id },
+      select: { id: true, password: true },
+    });
 
     if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
 

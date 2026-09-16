@@ -2,11 +2,18 @@ import { Request, Response } from "express";
 import { AppDataSource } from "../../database/data-source";
 import { Client } from "../entities/Client";
 import { ILike } from "typeorm";
+import { pickFields } from "../../utils/pickFields";
+
+const ALLOWED_FIELDS: (keyof Client)[] = [
+  "nickname", "name", "address", "number", "complement", "district", "city", "state",
+  "zip_code", "kind", "cnpj_cpf", "ins_est", "ins_mun", "telephone", "cellphone",
+  "situation", "account", "contacts",
+];
 
 export class ClientController {
   async create(req: Request, res: Response) {
     const clientRepo = AppDataSource.getRepository(Client);
-    const client = clientRepo.create({ ...req.body, tenant_id: req.user.tenant_id });
+    const client = clientRepo.create({ ...pickFields<Client>(req.body, ALLOWED_FIELDS), tenant_id: req.user.tenant_id });
     await clientRepo.save(client);
     return res.status(201).json(client);
   }
@@ -47,7 +54,7 @@ export class ClientController {
     const clientRepo = AppDataSource.getRepository(Client);
     const client = await clientRepo.findOne({ where: { id: req.params.id, tenant_id: req.user.tenant_id } });
     if (!client) return res.status(404).json({ error: "Cliente não encontrado" });
-    Object.assign(client, req.body);
+    Object.assign(client, pickFields<Client>(req.body, ALLOWED_FIELDS));
     await clientRepo.save(client);
     return res.json(client);
   }

@@ -1,8 +1,10 @@
 import dotenv from "dotenv";
 import app from "./app";
 import { initializeDataSource } from "./database/data-source";
+import { validateEnv } from "./config/validateEnv";
 
 dotenv.config();
+validateEnv();
 
 const PORT = process.env.PORT || 3333;
 

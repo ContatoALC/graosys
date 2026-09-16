@@ -2,12 +2,27 @@ import { Request, Response } from "express";
 import { AppDataSource } from "../../database/data-source";
 import { GrainContract } from "../entities/GrainContract";
 import { ILike } from "typeorm";
+import { pickFields } from "../../utils/pickFields";
+
+const ALLOWED_FIELDS: (keyof GrainContract)[] = [
+  "number_broker", "number_contract", "seller", "buyer", "list_email_seller", "list_email_buyer",
+  "product", "name_product", "crop", "quality", "type_quantity", "quantity", "quantity_kg",
+  "quantity_bag", "type_currency", "price", "type_icms", "icms", "payment",
+  "type_commission_seller", "commission_seller", "type_commission_buyer", "commission_buyer",
+  "type_pickup", "pickup", "pickup_location", "inspection", "observation",
+  "internal_communication", "destination", "complement_destination",
+  "number_external_contract_buyer", "number_external_contract_seller", "day_exchange_rate",
+  "payment_date", "initial_pickup_date", "final_pickup_date", "contract_emission_date",
+  "owner_contract", "total_contract_value", "commission_contract",
+  "commission_seller_contract_value", "commission_buyer_contract_value", "total_received",
+  "status_received", "expected_receipt_date", "table_id",
+];
 
 export class GrainContractController {
   async create(req: Request, res: Response) {
     const contractRepo = AppDataSource.getRepository(GrainContract);
     const contract = contractRepo.create({
-      ...req.body,
+      ...pickFields<GrainContract>(req.body, ALLOWED_FIELDS),
       tenant_id: req.user.tenant_id,
       status: {
         status_current: "Ativo",
@@ -48,7 +63,7 @@ export class GrainContractController {
     const contractRepo = AppDataSource.getRepository(GrainContract);
     const contract = await contractRepo.findOne({ where: { id: req.params.id, tenant_id: req.user.tenant_id } });
     if (!contract) return res.status(404).json({ error: "Contrato não encontrado" });
-    Object.assign(contract, req.body);
+    Object.assign(contract, pickFields<GrainContract>(req.body, ALLOWED_FIELDS));
     await contractRepo.save(contract);
     return res.json(contract);
   }

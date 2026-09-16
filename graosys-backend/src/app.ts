@@ -7,9 +7,12 @@ import { errorMiddleware } from "./app/middlewares/errorMiddleware";
 
 const app = express();
 
+const allowedOrigin = process.env.FRONTEND_URL;
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "*",
-  credentials: true,
+  // Sem FRONTEND_URL configurado (dev), reflete a origem da requisição sem
+  // credentials — nunca usamos "*" combinado com credentials: true.
+  origin: allowedOrigin || true,
+  credentials: Boolean(allowedOrigin),
 }));
 app.use(express.json());
 app.use(routes);
