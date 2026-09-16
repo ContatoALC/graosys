@@ -27,7 +27,7 @@ router.post("/api/auth/login", session.login);
 router.post("/api/tenants/register", tenant.register); // Cadastro de nova corretora
 
 // Protegido (requer JWT)
-//router.use(authMiddleware);
+router.use(authMiddleware);
 
 // Auth
 router.post("/api/auth/reset-password", session.resetPassword);
