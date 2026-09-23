@@ -21,7 +21,8 @@ export const AppDataSource = new DataSource(
         logging: false,
         entities: entitiesDir,
         migrations: ["src/database/migrations/*.ts"],
-        ssl: SSL_VALUE,
+        // Bancos gerenciados (Neon etc.) exigem SSL; ignora TYPEORM_SSL=false.
+        ssl: { rejectUnauthorized: false },
         extra: {
           // Ambiente serverless: cada invocação pode abrir sua própria
           // conexão, então mantemos o pool pequeno para não estourar o
