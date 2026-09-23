@@ -5,7 +5,9 @@ import { entitiesDir } from "../app/entities";
 
 dotenv.config({ path: ".env" });
 
-const SSL_VALUE = process.env.TYPEORM_SSL === "false" ? false : { rejectUnauthorized: false };
+const SSL_VALUE = { rejectUnauthorized: false };
+const dbHost = process.env.TYPEORM_HOST || "localhost";
+const isLocalHost = ["localhost", "127.0.0.1", "::1"].includes(dbHost);
 
 // Vercel Postgres / Neon / Supabase expõem uma connection string pronta
 // (DATABASE_URL ou POSTGRES_URL). Se existir, ela tem prioridade sobre as
@@ -21,8 +23,7 @@ export const AppDataSource = new DataSource(
         logging: false,
         entities: entitiesDir,
         migrations: ["src/database/migrations/*.ts"],
-        // Bancos gerenciados (Neon etc.) exigem SSL; ignora TYPEORM_SSL=false.
-        ssl: { rejectUnauthorized: false },
+        ssl: SSL_VALUE,
         extra: {
           // Ambiente serverless: cada invocação pode abrir sua própria
           // conexão, então mantemos o pool pequeno para não estourar o
@@ -35,7 +36,7 @@ export const AppDataSource = new DataSource(
       }
     : {
         type: "postgres",
-        host: process.env.TYPEORM_HOST || "localhost",
+        host: dbHost,
         port: Number(process.env.TYPEORM_PORT) || 5432,
         username: process.env.TYPEORM_USERNAME || "postgres",
         password: process.env.TYPEORM_PASSWORD || "postgres",
@@ -44,7 +45,8 @@ export const AppDataSource = new DataSource(
         logging: false,
         entities: entitiesDir,
         migrations: ["src/database/migrations/*.ts"],
-        ssl: process.env.NODE_ENV === "production" ? SSL_VALUE : false,
+        // Host remoto (Neon etc.) sempre com SSL; local só se TYPEORM_SSL=true.
+        ssl: !isLocalHost || process.env.TYPEORM_SSL === "true" ? SSL_VALUE : false,
         extra: {
           max: 20,
           min: 2,
