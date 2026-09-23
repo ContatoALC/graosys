@@ -5,6 +5,12 @@ import { entitiesDir } from "../app/entities";
 
 dotenv.config({ path: ".env" });
 
+// Nunca sincroniza schema na Vercel/produção (pode dropar colunas com dados);
+// para forçar, defina TYPEORM_SYNCHRONIZE=true.
+const SYNCHRONIZE =
+  process.env.TYPEORM_SYNCHRONIZE === "true" ||
+  (process.env.NODE_ENV !== "production" && !process.env.VERCEL);
+
 const SSL_VALUE = { rejectUnauthorized: false };
 const dbHost = process.env.TYPEORM_HOST || "localhost";
 const isLocalHost = ["localhost", "127.0.0.1", "::1"].includes(dbHost);
@@ -19,7 +25,7 @@ export const AppDataSource = new DataSource(
     ? {
         type: "postgres",
         url: connectionString,
-        synchronize: process.env.NODE_ENV !== "production",
+        synchronize: SYNCHRONIZE,
         logging: false,
         entities: entitiesDir,
         migrations: ["src/database/migrations/*.ts"],
@@ -41,7 +47,7 @@ export const AppDataSource = new DataSource(
         username: process.env.TYPEORM_USERNAME || "postgres",
         password: process.env.TYPEORM_PASSWORD || "postgres",
         database: process.env.TYPEORM_DATABASE || "graosys",
-        synchronize: process.env.NODE_ENV !== "production",
+        synchronize: SYNCHRONIZE,
         logging: false,
         entities: entitiesDir,
         migrations: ["src/database/migrations/*.ts"],
