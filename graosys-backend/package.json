@@ -10,6 +10,7 @@
     "build": "tsc",
     "start": "node build/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "seed": "ts-node --transpile-only src/database/seed.ts",
     "typeorm": "ts-node-dev ./node_modules/typeorm/cli.js",
     "migration:create": "npm run typeorm -- -d ./src/database/data-source.ts migration:create",
     "migration:run": "npm run typeorm -- -d ./src/database/data-source.ts migration:run",
