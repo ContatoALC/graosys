@@ -151,7 +151,7 @@ export function ContractFormPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Nº Contrato Corretor *</Label>
+                  <Label>Nº Corretor/Broker *</Label>
                   <Input {...register("number_broker", { required: true })} className={errors.number_broker ? "border-destructive" : ""} />
                 </div>
                 <div className="space-y-2">

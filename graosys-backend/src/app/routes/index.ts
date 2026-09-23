@@ -8,6 +8,7 @@ import { GrainContractController } from "../controllers/GrainContractController"
 import { BillingController } from "../controllers/BillingController";
 import { ProductController, ProductTableController } from "../controllers/ProductController";
 import { DashboardController } from "../controllers/DashboardController";
+import { BrokerController } from "../controllers/BrokerController";
 import { EmailController } from "../controllers/EmailController";
 
 const router = Router();
@@ -21,6 +22,7 @@ const product = new ProductController();
 const productTable = new ProductTableController();
 const dashboard = new DashboardController();
 const email = new EmailController();
+const broker = new BrokerController();
 
 // Público
 router.post("/api/auth/login", session.login);
@@ -79,6 +81,13 @@ router.get("/api/products/:id", product.getById);
 router.post("/api/products", requireRole("admin"), product.create);
 router.patch("/api/products/:id", requireRole("admin"), product.update);
 router.delete("/api/products/:id", requireRole("admin"), product.delete);
+
+// Brokers (Admin)
+router.get("/api/brokers", broker.getAll);
+router.get("/api/brokers/:id", broker.getById);
+router.post("/api/brokers", requireRole("admin"), broker.create);
+router.patch("/api/brokers/:id", requireRole("admin"), broker.update);
+router.delete("/api/brokers/:id", requireRole("admin"), broker.delete);
 
 // Email
 router.post("/api/email/send-contract", requirePermission("contracts", "view"), email.sendContractEmail);

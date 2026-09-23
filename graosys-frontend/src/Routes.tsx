@@ -15,6 +15,7 @@ import { AdminPage } from "@/pages/Admin";
 import { AdminUsersPage } from "@/pages/Admin/Users";
 import { AdminAccessControlPage } from "@/pages/Admin/AccessControl";
 import { AdminProductsPage } from "@/pages/Admin/Products";
+import { AdminBrokersPage } from "@/pages/Admin/Brokers";
 import { AdminTablesPage } from "@/pages/Admin/Tables";
 import { MyAccountPage } from "@/pages/MyAccount";
 
@@ -50,6 +51,7 @@ export function AppRoutes() {
         <Route path="admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
         <Route path="admin/access" element={<AdminRoute><AdminAccessControlPage /></AdminRoute>} />
         <Route path="admin/products" element={<AdminRoute><AdminProductsPage /></AdminRoute>} />
+        <Route path="admin/brokers" element={<AdminRoute><AdminBrokersPage /></AdminRoute>} />
         <Route path="admin/tables" element={<AdminRoute><AdminTablesPage /></AdminRoute>} />
         <Route path="my-account" element={<MyAccountPage />} />
       </Route>

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Users, ShieldCheck, Package, Table2 } from "lucide-react";
+import { Users, ShieldCheck, Package, Table2, Handshake } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -7,6 +7,7 @@ const adminModules = [
   { label: "Usuários", description: "Gerenciar usuários da corretora", icon: Users, path: "/admin/users", color: "bg-blue-100 text-blue-700" },
   { label: "Controle de Acesso", description: "Permissões por usuário", icon: ShieldCheck, path: "/admin/access", color: "bg-purple-100 text-purple-700" },
   { label: "Produtos", description: "Grãos e commodities negociadas", icon: Package, path: "/admin/products", color: "bg-green-100 text-green-700" },
+  { label: "Corretores/Brokers", description: "Cadastro de corretores e brokers", icon: Handshake, path: "/admin/brokers", color: "bg-amber-100 text-amber-700" },
   { label: "Mesas de Preço", description: "Tabelas de preço por produto/safra", icon: Table2, path: "/admin/tables", color: "bg-primary/10 text-primary" },
 ];
 
