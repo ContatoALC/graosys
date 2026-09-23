@@ -9,6 +9,7 @@ import { BillingController } from "../controllers/BillingController";
 import { ProductController, ProductTableController } from "../controllers/ProductController";
 import { DashboardController } from "../controllers/DashboardController";
 import { BrokerController } from "../controllers/BrokerController";
+import { EmailSettingsController } from "../controllers/EmailSettingsController";
 import { EmailController } from "../controllers/EmailController";
 
 const router = Router();
@@ -22,6 +23,7 @@ const product = new ProductController();
 const productTable = new ProductTableController();
 const dashboard = new DashboardController();
 const email = new EmailController();
+const emailSettings = new EmailSettingsController();
 const broker = new BrokerController();
 
 // Público
@@ -88,6 +90,11 @@ router.get("/api/brokers/:id", broker.getById);
 router.post("/api/brokers", requireRole("admin"), broker.create);
 router.patch("/api/brokers/:id", requireRole("admin"), broker.update);
 router.delete("/api/brokers/:id", requireRole("admin"), broker.delete);
+
+// Configuração de e-mail da corretora (Admin)
+router.get("/api/email-settings", requireRole("admin"), emailSettings.get);
+router.put("/api/email-settings", requireRole("admin"), emailSettings.save);
+router.post("/api/email-settings/test", requireRole("admin"), emailSettings.test);
 
 // Email
 router.post("/api/email/send-contract", requirePermission("contracts", "view"), email.sendContractEmail);

@@ -6,5 +6,6 @@ import { Product } from "./Product";
 import { ProductTable } from "./ProductTable";
 import { Billing } from "./Billing";
 import { Broker } from "./Broker";
+import { TenantEmailSettings } from "./TenantEmailSettings";
 
-export const entitiesDir = [Tenant, User, Client, GrainContract, Product, ProductTable, Billing, Broker];
+export const entitiesDir = [Tenant, User, Client, GrainContract, Product, ProductTable, Billing, Broker, TenantEmailSettings];

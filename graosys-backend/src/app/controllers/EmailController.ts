@@ -1,9 +1,14 @@
 import { Request, Response } from "express";
-import nodemailer from "nodemailer";
 import sanitizeHtml from "sanitize-html";
 import { AppDataSource } from "../../database/data-source";
 import { Tenant } from "../entities/Tenant";
 import { GrainContract } from "../entities/GrainContract";
+import { getTenantMailer } from "../../services/tenantMailer";
+import { generateContractPdf } from "../../services/contractPdf";
+
+function safeFile(v: string): string {
+  return String(v).replace(/[^\w.-]+/g, "_");
+}
 
 function escapeHtml(value: unknown): string {
   if (value === null || value === undefined) return "";
@@ -28,20 +33,6 @@ const EMAIL_BODY_SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
 };
 
 export class EmailController {
-  private async getTransporter(tenant: Tenant) {
-    // Cada tenant pode ter seu SMTP configurado futuramente.
-    // Por ora usa as variáveis de ambiente globais.
-    return nodemailer.createTransport({
-      host: process.env.SMTP_HOST || "smtp.gmail.com",
-      port: parseInt(process.env.SMTP_PORT || "587"),
-      secure: process.env.SMTP_SECURE === "true",
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-  }
-
   async sendContractEmail(req: Request, res: Response) {
     const { contract_id, copy_correct } = req.body;
     const { tenant_id } = req.user;
@@ -68,11 +59,9 @@ export class EmailController {
     const subject = `Contrato ${contract.number_contract} - ${tenant.name}${subjectSuffix}`;
 
     const isLocal = process.env.NODE_ENV !== "production";
-    const bccList = isLocal
-      ? [process.env.SMTP_USER!]
-      : [tenant.email].filter(Boolean);
-
-    const transporter = await this.getTransporter(tenant);
+    const mailer = await getTenantMailer(tenant);
+    const bccList = isLocal ? [process.env.SMTP_USER!].filter(Boolean) : mailer.bcc;
+    const transporter = mailer.transporter;
 
     const contractHtml = buildContractHtml(contract, tenant);
 
@@ -81,11 +70,12 @@ export class EmailController {
     if (sellerEmails.length > 0) {
       const sellerNames = Array.isArray(contract.seller) ? contract.seller.join(", ") : contract.seller;
       await transporter.sendMail({
-        from: `"${tenant.name}" <${process.env.SMTP_USER}>`,
+        from: mailer.from,
         to: sellerEmails,
         bcc: bccList,
         subject: `${subject} - Vendedor`,
-        html: contractHtml("Vendedor", sellerNames),
+        html: contractHtml("Vendedor", sellerNames, mailer.signature),
+        attachments: [{ filename: `contrato_${safeFile(contract.number_contract)}_vendedor.pdf`, content: await generateContractPdf(contract, tenant, "Vendedor") }],
       });
       sentTo.push(...sellerEmails);
     }
@@ -93,11 +83,12 @@ export class EmailController {
     if (buyerEmails.length > 0) {
       const buyerNames = Array.isArray(contract.buyer) ? contract.buyer.join(", ") : contract.buyer;
       await transporter.sendMail({
-        from: `"${tenant.name}" <${process.env.SMTP_USER}>`,
+        from: mailer.from,
         to: buyerEmails,
         bcc: bccList,
         subject: `${subject} - Comprador`,
-        html: contractHtml("Comprador", buyerNames),
+        html: contractHtml("Comprador", buyerNames, mailer.signature),
+        attachments: [{ filename: `contrato_${safeFile(contract.number_contract)}_comprador.pdf`, content: await generateContractPdf(contract, tenant, "Comprador") }],
       });
       sentTo.push(...buyerEmails);
     }
@@ -119,11 +110,11 @@ export class EmailController {
     const tenant = await tenantRepo.findOne({ where: { id: req.user.tenant_id } });
     if (!tenant) return res.status(404).json({ error: "Corretora não encontrada" });
 
-    const transporter = await this.getTransporter(tenant);
+    const mailer = await getTenantMailer(tenant);
     const safeBody = sanitizeHtml(body, EMAIL_BODY_SANITIZE_OPTIONS);
 
-    await transporter.sendMail({
-      from: `"${tenant.name}" <${process.env.SMTP_USER}>`,
+    await mailer.transporter.sendMail({
+      from: mailer.from,
       to: Array.isArray(to) ? to : [to],
       subject,
       html: safeBody,
@@ -134,7 +125,7 @@ export class EmailController {
 }
 
 function buildContractHtml(contract: GrainContract, tenant: Tenant) {
-  return (role: string, recipientName: string) => {
+  return (role: string, recipientName: string, signature?: string | null) => {
     const tenantName = escapeHtml(tenant.name);
     const numberContract = escapeHtml(contract.number_contract);
     const nameProduct = escapeHtml(contract.name_product);
@@ -175,9 +166,9 @@ function buildContractHtml(contract: GrainContract, tenant: Tenant) {
 
         <p>Solicitamos confirmar o recebimento deste e-mail respondendo a esta mensagem.</p>
 
-        <p>Agradecemos a parceria e nos colocamos à disposição.</p>
+        <p>O contrato segue em anexo (PDF). Agradecemos a parceria e nos colocamos à disposição.</p>
 
-        <p style="margin-top: 24px;">Atenciosamente,<br/><strong>${tenantName}</strong></p>
+        <p style="margin-top: 24px;">Atenciosamente,<br/><strong>${tenantName}</strong>${signature ? `<br/>${escapeHtml(signature).replace(/\n/g, "<br/>")}` : ""}</p>
       </div>
 
       <p style="font-size: 11px; color: #9ca3af; text-align: center; margin-top: 16px;">

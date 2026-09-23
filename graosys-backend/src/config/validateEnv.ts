@@ -15,6 +15,10 @@ export function validateEnv() {
     errors.push("JWT_SECRET ausente, curto (mínimo 32 caracteres) ou igual a um valor padrão inseguro.");
   }
 
+  if (!process.env.EMAIL_ENCRYPTION_KEY || process.env.EMAIL_ENCRYPTION_KEY.length < 32) {
+    console.warn("EMAIL_ENCRYPTION_KEY ausente ou curta (mínimo 32 caracteres): cadastro de SMTP por corretora ficará indisponível.");
+  }
+
   const hasConnectionString = Boolean(process.env.DATABASE_URL || process.env.POSTGRES_URL);
   if (!hasConnectionString) {
     const dbPassword = process.env.TYPEORM_PASSWORD;
