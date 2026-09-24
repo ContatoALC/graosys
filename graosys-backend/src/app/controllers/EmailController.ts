@@ -4,7 +4,7 @@ import { AppDataSource } from "../../database/data-source";
 import { Tenant } from "../entities/Tenant";
 import { GrainContract } from "../entities/GrainContract";
 import { getTenantMailer } from "../../services/tenantMailer";
-import { generateContractPdf } from "../../services/contractPdf";
+import { generateContractPdf, getPdfSettings } from "../../services/contractPdf";
 
 function safeFile(v: string): string {
   return String(v).replace(/[^\w.-]+/g, "_");
@@ -62,6 +62,7 @@ export class EmailController {
     const mailer = await getTenantMailer(tenant);
     const bccList = isLocal ? [process.env.SMTP_USER!].filter(Boolean) : mailer.bcc;
     const transporter = mailer.transporter;
+    const layout = await getPdfSettings(tenant_id);
 
     const contractHtml = buildContractHtml(contract, tenant);
 
@@ -75,7 +76,7 @@ export class EmailController {
         bcc: bccList,
         subject: `${subject} - Vendedor`,
         html: contractHtml("Vendedor", sellerNames, mailer.signature),
-        attachments: [{ filename: `contrato_${safeFile(contract.number_contract)}_vendedor.pdf`, content: await generateContractPdf(contract, tenant, "Vendedor") }],
+        attachments: [{ filename: `contrato_${safeFile(contract.number_contract)}_vendedor.pdf`, content: await generateContractPdf(contract, tenant, "Vendedor", layout) }],
       });
       sentTo.push(...sellerEmails);
     }
@@ -88,7 +89,7 @@ export class EmailController {
         bcc: bccList,
         subject: `${subject} - Comprador`,
         html: contractHtml("Comprador", buyerNames, mailer.signature),
-        attachments: [{ filename: `contrato_${safeFile(contract.number_contract)}_comprador.pdf`, content: await generateContractPdf(contract, tenant, "Comprador") }],
+        attachments: [{ filename: `contrato_${safeFile(contract.number_contract)}_comprador.pdf`, content: await generateContractPdf(contract, tenant, "Comprador", layout) }],
       });
       sentTo.push(...buyerEmails);
     }

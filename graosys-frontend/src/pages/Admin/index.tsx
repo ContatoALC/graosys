@@ -6,6 +6,7 @@ import {
   Table2,
   Handshake,
   Mail,
+  FileImage,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -45,6 +46,13 @@ const adminModules = [
     icon: Mail,
     path: "/admin/email",
     color: "bg-sky-100 text-sky-700",
+  },
+  {
+    label: "Layout do PDF",
+    description: "Logo e marca d'água dos contratos",
+    icon: FileImage,
+    path: "/admin/pdf-layout",
+    color: "bg-rose-100 text-rose-700",
   },
   {
     label: "Mesas",

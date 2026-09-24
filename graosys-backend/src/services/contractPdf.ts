@@ -1,5 +1,7 @@
 import { GrainContract } from "../app/entities/GrainContract";
 import { Tenant } from "../app/entities/Tenant";
+import { TenantPdfSettings } from "../app/entities/TenantPdfSettings";
+import { AppDataSource } from "../database/data-source";
 import { formatCurrency, formatQuantity, insertMaskInCnpj } from "../utils/format";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -28,7 +30,16 @@ export type ContractPdfRole = "Vendedor" | "Comprador";
 const join = (v: unknown) => (Array.isArray(v) ? v.join(", ") : v ? String(v) : "—");
 const text = (v: unknown) => (v === null || v === undefined || v === "" ? "—" : String(v));
 
-export async function generateContractPdf(contract: GrainContract, tenant: Tenant, role: ContractPdfRole): Promise<Buffer> {
+export function getPdfSettings(tenantId: string) {
+  return AppDataSource.getRepository(TenantPdfSettings).findOne({ where: { tenant_id: tenantId } });
+}
+
+export async function generateContractPdf(
+  contract: GrainContract,
+  tenant: Tenant,
+  role: ContractPdfRole,
+  layout?: TenantPdfSettings | null
+): Promise<Buffer> {
   const isSeller = role === "Vendedor";
   const currency = contract.type_currency;
   const unit = text(contract.type_quantity);
@@ -52,13 +63,37 @@ export async function generateContractPdf(contract: GrainContract, tenant: Tenan
     ["Observação", text(contract.observation)],
   ];
 
+  // Cada parte só vê a própria comissão.
+  const commission = isSeller ? contract.commission_seller : contract.commission_buyer;
+  const commissionType = isSeller ? contract.type_commission_seller : contract.type_commission_buyer;
+  const commissionValue = isSeller ? contract.commission_seller_contract_value : contract.commission_buyer_contract_value;
+  if (commission !== null && commission !== undefined && String(commission).trim() !== "") {
+    const total = Number(commissionValue);
+    const totalText = commissionValue && total > 0 ? ` (${formatCurrency(total, currency)})` : "";
+    rows.splice(rows.length - 1, 0, ["Comissão", `${commission} ${commissionType || ""}`.trim() + totalText]);
+  }
+
   const docDefinition = {
     pageSize: "A4",
     pageMargins: [40, 50, 40, 50],
     defaultStyle: { font: "Roboto", fontSize: 10 },
+    background: layout?.watermark_enabled && layout.watermark_data
+      ? (_page: number, pageSize: { width: number; height: number }) => {
+          const w = Math.min(pageSize.width * 0.7, 400);
+          return {
+            image: layout.watermark_data,
+            width: w,
+            opacity: layout.watermark_opacity,
+            absolutePosition: { x: (pageSize.width - w) / 2, y: pageSize.height * 0.3 },
+          };
+        }
+      : undefined,
     content: [
-      { text: tenant.name, style: "title" },
-      { text: tenant.cnpj ? `CNPJ ${insertMaskInCnpj(tenant.cnpj)}` : "", color: "#555555", margin: [0, 0, 0, 12] },
+      ...(layout?.logo_data
+        ? [{ image: layout.logo_data, width: layout.logo_width, alignment: layout.logo_position, margin: [0, 0, 0, 12] }]
+        : []),
+      { text: tenant.name, style: "title", alignment: layout?.logo_data ? layout.logo_position : "left" },
+      { text: tenant.cnpj ? `CNPJ ${insertMaskInCnpj(tenant.cnpj)}` : "", color: "#555555", margin: [0, 0, 0, 12], alignment: layout?.logo_data ? layout.logo_position : "left" },
       { text: `CONFIRMAÇÃO DE CONTRATO - ${role.toUpperCase()}`, style: "subtitle" },
       {
         table: {

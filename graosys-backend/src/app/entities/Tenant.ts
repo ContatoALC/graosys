@@ -25,7 +25,7 @@ export class Tenant {
   status: string; // active | inactive | suspended
 
   @Column({ default: "trial" })
-  plan: string; // trial | basic | pro | enterprise
+  plan: string; // trial | essencial | profissional | corporativo
 
   @Column({ nullable: true })
   plan_expires_at: Date;

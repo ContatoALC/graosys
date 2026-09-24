@@ -42,7 +42,7 @@ export class TenantController {
   }
 
   async update(req: Request, res: Response) {
-    if (req.user.role !== "admin") {
+    if (req.user.role !== "admin" && req.user.role !== "superadmin") {
       return res.status(403).json({ error: "Apenas administradores podem editar os dados da corretora" });
     }
     const tenantRepo = AppDataSource.getRepository(Tenant);

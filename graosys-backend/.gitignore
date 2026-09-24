@@ -3,3 +3,4 @@ build/
 .env
 *.log
 README.local.md
+src/database/seed-leads.data.json

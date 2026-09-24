@@ -13,6 +13,7 @@ import {
   LogOut,
   Wheat,
   ChevronLeft,
+  Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -26,6 +27,8 @@ const navItems = [
   { label: "Relatórios", icon: BarChart3, path: "/reports" },
 ];
 
+const platformItem = { label: "Painel de Controle", icon: Building2, path: "/platform" };
+
 const bottomItems = [
   { label: "Admin", icon: Settings, path: "/admin" },
   { label: "Minha Conta", icon: User, path: "/my-account" },
@@ -35,6 +38,8 @@ export function Sidebar() {
   const { pathname } = useLocation();
   const { user, signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const isAdmin = user?.role === "admin" || user?.role === "superadmin";
+  const bottom = user?.role === "superadmin" ? [platformItem, ...bottomItems] : bottomItems;
 
   return (
     <aside className={cn("relative flex h-screen flex-col border-r bg-card transition-all duration-300", collapsed ? "w-16" : "w-60")}>
@@ -85,7 +90,7 @@ export function Sidebar() {
 
       {/* Bottom */}
       <div className="border-t p-2 space-y-1">
-        {user?.role === "admin" && bottomItems.map((item) => {
+        {isAdmin && bottom.map((item) => {
           const active = pathname.startsWith(item.path);
           return (
             <Link
@@ -103,7 +108,7 @@ export function Sidebar() {
             </Link>
           );
         })}
-        {!user?.role?.includes("admin") && (
+        {!isAdmin && (
           <Link
             to="/my-account"
             className={cn(

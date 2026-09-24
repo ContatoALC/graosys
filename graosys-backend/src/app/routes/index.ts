@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authMiddleware, requireRole, requirePermission } from "../middlewares/authMiddleware";
+import { authMiddleware, requireRole, requirePermission, requireSuperadmin } from "../middlewares/authMiddleware";
 import { SessionController } from "../controllers/SessionController";
 import { TenantController } from "../controllers/TenantController";
 import { UserController } from "../controllers/UserController";
@@ -10,6 +10,9 @@ import { ProductController, ProductTableController } from "../controllers/Produc
 import { DashboardController } from "../controllers/DashboardController";
 import { BrokerController } from "../controllers/BrokerController";
 import { EmailSettingsController } from "../controllers/EmailSettingsController";
+import { PdfSettingsController } from "../controllers/PdfSettingsController";
+import { LeadController } from "../controllers/LeadController";
+import { PlatformController } from "../controllers/PlatformController";
 import { EmailController } from "../controllers/EmailController";
 
 const router = Router();
@@ -23,6 +26,9 @@ const product = new ProductController();
 const productTable = new ProductTableController();
 const dashboard = new DashboardController();
 const email = new EmailController();
+const platform = new PlatformController();
+const lead = new LeadController();
+const pdfSettings = new PdfSettingsController();
 const emailSettings = new EmailSettingsController();
 const broker = new BrokerController();
 
@@ -90,6 +96,29 @@ router.get("/api/brokers/:id", broker.getById);
 router.post("/api/brokers", requireRole("admin"), broker.create);
 router.patch("/api/brokers/:id", requireRole("admin"), broker.update);
 router.delete("/api/brokers/:id", requireRole("admin"), broker.delete);
+
+// Painel da plataforma (superadmin)
+router.get("/api/platform/summary", requireSuperadmin, platform.summary);
+router.get("/api/platform/plans", requireSuperadmin, platform.plans);
+router.get("/api/platform/tenants", requireSuperadmin, platform.listTenants);
+router.post("/api/platform/tenants", requireSuperadmin, platform.createTenant);
+router.get("/api/platform/tenants/:id", requireSuperadmin, platform.getTenant);
+router.patch("/api/platform/tenants/:id", requireSuperadmin, platform.updateTenant);
+router.post("/api/platform/tenants/:id/users", requireSuperadmin, platform.createUser);
+router.patch("/api/platform/users/:id", requireSuperadmin, platform.updateUser);
+router.post("/api/platform/users/:id/reset-password", requireSuperadmin, platform.resetUserPassword);
+
+// Prospecção (superadmin)
+router.get("/api/platform/leads", requireSuperadmin, lead.list);
+router.post("/api/platform/leads", requireSuperadmin, lead.create);
+router.get("/api/platform/leads/:id", requireSuperadmin, lead.get);
+router.patch("/api/platform/leads/:id", requireSuperadmin, lead.update);
+router.delete("/api/platform/leads/:id", requireSuperadmin, lead.delete);
+
+// Layout do PDF do contrato (Admin)
+router.get("/api/pdf-settings", requireRole("admin"), pdfSettings.get);
+router.put("/api/pdf-settings", requireRole("admin"), pdfSettings.save);
+router.get("/api/pdf-settings/preview", requireRole("admin"), pdfSettings.preview);
 
 // Configuração de e-mail da corretora (Admin)
 router.get("/api/email-settings", requireRole("admin"), emailSettings.get);

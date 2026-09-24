@@ -17,7 +17,12 @@ import { AdminAccessControlPage } from "@/pages/Admin/AccessControl";
 import { AdminProductsPage } from "@/pages/Admin/Products";
 import { AdminBrokersPage } from "@/pages/Admin/Brokers";
 import { AdminEmailSettingsPage } from "@/pages/Admin/EmailSettings";
+import { AdminPdfLayoutPage } from "@/pages/Admin/PdfLayout";
 import { AdminTablesPage } from "@/pages/Admin/Tables";
+import { PlatformPage } from "@/pages/Platform";
+import { PlatformLeadsPage } from "@/pages/Platform/Leads";
+import { PlatformLeadDetailPage } from "@/pages/Platform/Leads/LeadDetail";
+import { PlatformTenantDetailPage } from "@/pages/Platform/TenantDetail";
 import { MyAccountPage } from "@/pages/MyAccount";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -28,7 +33,12 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  return user?.role === "admin" ? <>{children}</> : <Navigate to="/dashboard" replace />;
+  return user?.role === "admin" || user?.role === "superadmin" ? <>{children}</> : <Navigate to="/dashboard" replace />;
+}
+
+function SuperadminRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  return user?.role === "superadmin" ? <>{children}</> : <Navigate to="/dashboard" replace />;
 }
 
 export function AppRoutes() {
@@ -54,7 +64,12 @@ export function AppRoutes() {
         <Route path="admin/products" element={<AdminRoute><AdminProductsPage /></AdminRoute>} />
         <Route path="admin/brokers" element={<AdminRoute><AdminBrokersPage /></AdminRoute>} />
         <Route path="admin/email" element={<AdminRoute><AdminEmailSettingsPage /></AdminRoute>} />
+        <Route path="admin/pdf-layout" element={<AdminRoute><AdminPdfLayoutPage /></AdminRoute>} />
         <Route path="admin/tables" element={<AdminRoute><AdminTablesPage /></AdminRoute>} />
+        <Route path="platform" element={<SuperadminRoute><PlatformPage /></SuperadminRoute>} />
+        <Route path="platform/leads" element={<SuperadminRoute><PlatformLeadsPage /></SuperadminRoute>} />
+        <Route path="platform/leads/:id" element={<SuperadminRoute><PlatformLeadDetailPage /></SuperadminRoute>} />
+        <Route path="platform/tenants/:id" element={<SuperadminRoute><PlatformTenantDetailPage /></SuperadminRoute>} />
         <Route path="my-account" element={<MyAccountPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

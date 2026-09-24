@@ -40,16 +40,18 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
 
 export function requireRole(...roles: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
-    if (!roles.includes(req.user.role)) {
+    if (req.user.role !== "superadmin" && !roles.includes(req.user.role)) {
       return res.status(403).json({ error: "Acesso negado" });
     }
     return next();
   };
 }
 
+export const requireSuperadmin = requireRole("superadmin");
+
 export function requirePermission(module: string, action: string) {
   return (req: Request, res: Response, next: NextFunction) => {
-    if (req.user.role === "admin") return next();
+    if (req.user.role === "admin" || req.user.role === "superadmin") return next();
     const modulePermissions = req.user.permissions?.[module] || [];
     if (!modulePermissions.includes(action)) {
       return res.status(403).json({ error: "Você não tem permissão para esta ação" });

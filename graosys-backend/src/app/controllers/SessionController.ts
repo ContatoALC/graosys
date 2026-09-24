@@ -36,6 +36,8 @@ export class SessionController {
       return res.status(403).json({ error: "Conta suspensa. Entre em contato com o suporte." });
     }
 
+    await userRepo.update(user.id, { last_login_at: new Date() });
+
     const token = jwt.sign(
       {
         id: user.id,

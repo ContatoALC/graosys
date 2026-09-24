@@ -15,7 +15,7 @@ app.use(cors({
   origin: allowedOrigin || true,
   credentials: Boolean(allowedOrigin),
 }));
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 
 // Em serverless o entrypoint pode ser este arquivo (sem passar por server.ts
 // ou api/index.ts), então garantimos a conexão antes de tratar a requisição.

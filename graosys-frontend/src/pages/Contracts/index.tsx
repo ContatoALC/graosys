@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Search, FileText, Eye } from "lucide-react";
+import { Plus, Search, FileText, Eye, Mail } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/services/api";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -22,6 +23,23 @@ export function ContractsPage() {
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [toSend, setToSend] = useState<any | null>(null);
+  const [copyCorrect, setCopyCorrect] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState<{ type: "ok" | "error"; text: string } | null>(null);
+
+  function openSend(c: any) { setToSend(c); setCopyCorrect(false); setSendResult(null); }
+
+  async function sendContract() {
+    if (!toSend) return;
+    setSending(true); setSendResult(null);
+    try {
+      const r = await api.post("/api/email/send-contract", { contract_id: toSend.id, copy_correct: copyCorrect });
+      setSendResult({ type: "ok", text: `${r.data.message} (${r.data.sent_to.length} destinatário(s))` });
+    } catch (e: any) {
+      setSendResult({ type: "error", text: e.response?.data?.error || "Erro ao enviar e-mail" });
+    } finally { setSending(false); }
+  }
 
   function load(q = "") {
     setIsLoading(true);
@@ -111,9 +129,14 @@ export function ContractsPage() {
                       </TableCell>
                       <TableCell>{formatDate(c.contract_emission_date)}</TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link to={`/contracts/${c.id}`}><Eye className="h-4 w-4" /></Link>
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" asChild>
+                            <Link to={`/contracts/${c.id}`}><Eye className="h-4 w-4" /></Link>
+                          </Button>
+                          <Button variant="ghost" size="icon" title="Enviar por e-mail (PDF)" onClick={() => openSend(c)}>
+                            <Mail className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -123,6 +146,26 @@ export function ContractsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={!!toSend} onOpenChange={(open) => !open && setToSend(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enviar contrato {toSend?.number_contract} por e-mail</DialogTitle>
+            <DialogDescription>
+              O contrato {toSend?.number_contract} será enviado em PDF ao vendedor ({(toSend?.list_email_seller || []).join(", ") || "sem e-mail"}) e ao comprador ({(toSend?.list_email_buyer || []).join(", ") || "sem e-mail"}).
+            </DialogDescription>
+          </DialogHeader>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={copyCorrect} onChange={(e) => setCopyCorrect(e.target.checked)} className="h-4 w-4" />
+            Marcar como "CÓPIA CORRETA" (reenvio)
+          </label>
+          {sendResult && <p className={sendResult.type === "ok" ? "text-sm text-green-700" : "text-sm text-destructive"}>{sendResult.text}</p>}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setToSend(null)}>Fechar</Button>
+            <Button onClick={sendContract} disabled={sending || sendResult?.type === "ok"}>{sending ? "Enviando..." : "Enviar"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

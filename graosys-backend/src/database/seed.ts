@@ -53,7 +53,7 @@ async function seed() {
     name: ADMIN_NAME,
     email: ADMIN_EMAIL,
     password: await bcrypt.hash(password, 10),
-    role: "admin",
+    role: "superadmin",
     permissions: {},
     active: true,
   });

@@ -21,7 +21,7 @@ export async function getTenantMailer(tenant: Tenant): Promise<TenantMailer> {
     const transporter = nodemailer.createTransport({
       host: settings.smtp_host,
       port: settings.smtp_port,
-      secure: settings.smtp_secure,
+      secure: settings.smtp_secure || settings.smtp_port === 465,
       auth: { user: settings.smtp_user, pass: decryptSecret(settings.smtp_pass_encrypted) },
     });
     const fromEmail = settings.from_email || settings.smtp_user;
