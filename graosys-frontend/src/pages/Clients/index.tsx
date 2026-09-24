@@ -99,7 +99,7 @@ export function ClientsPage() {
                       <TableCell className="font-medium">{c.name}</TableCell>
                       <TableCell>{c.nickname}</TableCell>
                       <TableCell className="font-mono text-xs">{formatCnpjCpf(c.cnpj_cpf)}</TableCell>
-                      <TableCell>{c.city}{c.state ? ` / ${c.state}` : ""}</TableCell>
+                      <TableCell>{c.city}{c.state ? ` / ${c.state}` : ""}{c.country && c.country !== "Brasil" ? ` - ${c.country}` : ""}</TableCell>
                       <TableCell>
                         <Badge variant={c.situation === "active" ? "success" : "secondary"}>
                           {c.situation === "active" ? "Ativo" : "Inativo"}

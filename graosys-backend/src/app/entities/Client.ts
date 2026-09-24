@@ -41,6 +41,9 @@ export class Client {
   @Column({ nullable: true })
   zip_code: string;
 
+  @Column({ type: "varchar", default: "Brasil" })
+  country: string;
+
   @Column()
   kind: string; // PF | PJ
 

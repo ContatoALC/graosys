@@ -26,6 +26,7 @@ interface ClientForm {
   city: string;
   state: string;
   zip_code: string;
+  country: string;
   ins_est: string;
   ins_mun: string;
 }
@@ -38,7 +39,7 @@ export function ClientFormPage() {
   const [error, setError] = useState("");
 
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm<ClientForm>({
-    defaultValues: { kind: "PJ", situation: "active" },
+    defaultValues: { kind: "PJ", situation: "active", country: "Brasil" },
   });
 
   useEffect(() => {
@@ -188,6 +189,11 @@ export function ClientFormPage() {
                   <Label>UF</Label>
                   <Input {...register("state")} maxLength={2} placeholder="SP" />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>País</Label>
+                <Input {...register("country")} placeholder="Brasil" />
               </div>
             </CardContent>
           </Card>

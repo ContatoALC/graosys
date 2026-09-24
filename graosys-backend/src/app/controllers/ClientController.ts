@@ -6,7 +6,7 @@ import { pickFields } from "../../utils/pickFields";
 
 const ALLOWED_FIELDS: (keyof Client)[] = [
   "nickname", "name", "address", "number", "complement", "district", "city", "state",
-  "zip_code", "kind", "cnpj_cpf", "ins_est", "ins_mun", "telephone", "cellphone",
+  "zip_code", "country", "kind", "cnpj_cpf", "ins_est", "ins_mun", "telephone", "cellphone",
   "situation", "account", "contacts",
 ];
 
