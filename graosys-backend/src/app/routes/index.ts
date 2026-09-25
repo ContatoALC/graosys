@@ -50,6 +50,7 @@ router.post("/api/auth/reset-password", session.resetPassword);
 router.get("/api/auth/profile", user.getProfile);
 
 // Dashboard
+router.get("/api/dashboard/management", requirePermission("reports", "view"), dashboard.getManagement);
 router.get("/api/dashboard/summary", dashboard.getSummary);
 
 // Tenant (dados da corretora logada)

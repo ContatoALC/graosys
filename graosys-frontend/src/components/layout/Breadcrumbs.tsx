@@ -8,7 +8,7 @@ const LABELS: Record<string, string> = {
   billing: "Cobrança", receipt: "Recebimento", reports: "Relatórios", admin: "Administração", users: "Usuários",
   access: "Controle de Acesso", products: "Produtos", brokers: "Corretores/Brokers", email: "E-mail da Corretora",
   "pdf-layout": "Layout do PDF", tables: "Mesas", "my-account": "Minha Conta", platform: "Painel de Controle",
-  leads: "Prospecção", tenants: "Corretoras", audit: "Auditoria", sessions: "Usuários online",
+  leads: "Prospecção", tenants: "Corretoras", audit: "Auditoria", management: "Gerência", sessions: "Usuários online",
 };
 
 // Segmentos dinâmicos (ids): o rótulo depende da seção anterior.

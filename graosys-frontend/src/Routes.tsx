@@ -23,6 +23,7 @@ import { AdminAuditPage } from "@/pages/Admin/Audit";
 import { AdminSessionsPage } from "@/pages/Admin/Sessions";
 import { PlatformAuditPage } from "@/pages/Platform/Audit";
 import { PlatformSessionsPage } from "@/pages/Platform/Sessions";
+import { ManagementPage } from "@/pages/Management";
 import { PlatformPage } from "@/pages/Platform";
 import { PlatformLeadsPage } from "@/pages/Platform/Leads";
 import { PlatformLeadDetailPage } from "@/pages/Platform/Leads/LeadDetail";
@@ -46,6 +47,12 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return user?.role === "admin" || user?.role === "superadmin" ? <>{children}</> : <Navigate to="/dashboard" replace />;
 }
 
+function ReportsRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const allowed = user?.role === "admin" || user?.role === "superadmin" || !!user?.permissions?.reports?.includes("view");
+  return allowed ? <>{children}</> : <Navigate to="/dashboard" replace />;
+}
+
 function SuperadminRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   return user?.role === "superadmin" ? <>{children}</> : <Navigate to="/dashboard" replace />;
@@ -67,6 +74,7 @@ export function AppRoutes() {
         <Route path="execution" element={<ExecutionPage />} />
         <Route path="billing" element={<BillingPage />} />
         <Route path="billing/receipt" element={<ReceiptPage />} />
+        <Route path="management" element={<ReportsRoute><ManagementPage /></ReportsRoute>} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
         <Route path="admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />

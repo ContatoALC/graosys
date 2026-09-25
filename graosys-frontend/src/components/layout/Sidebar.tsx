@@ -14,6 +14,7 @@ import {
   Wheat,
   ChevronLeft,
   Building2,
+  Gauge,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -27,6 +28,8 @@ const navItems = [
   { label: "Relatórios", icon: BarChart3, path: "/reports" },
 ];
 
+const managementItem = { label: "Gerência", icon: Gauge, path: "/management" };
+
 const platformItem = { label: "Painel de Controle", icon: Building2, path: "/platform" };
 
 const bottomItems = [
@@ -39,6 +42,7 @@ export function Sidebar() {
   const { user, signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const isAdmin = user?.role === "admin" || user?.role === "superadmin";
+  const canSeeManagement = isAdmin || !!user?.permissions?.reports?.includes("view");
   const bottom = user?.role === "superadmin" ? [platformItem, ...bottomItems] : bottomItems;
 
   return (
@@ -68,7 +72,7 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 space-y-1 overflow-y-auto p-2 pt-4">
-        {navItems.map((item) => {
+        {(canSeeManagement ? [...navItems, managementItem] : navItems).map((item) => {
           const active = pathname.startsWith(item.path);
           return (
             <Link
