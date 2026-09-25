@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { api } from "@/services/api";
+import { COUNTRIES, countryCodeFor } from "@/lib/countries";
 
 interface ClientForm {
   name: string;
@@ -27,6 +28,7 @@ interface ClientForm {
   state: string;
   zip_code: string;
   country: string;
+  country_code: string;
   ins_est: string;
   ins_mun: string;
 }
@@ -38,8 +40,8 @@ export function ClientFormPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const { register, handleSubmit, reset, control, formState: { errors } } = useForm<ClientForm>({
-    defaultValues: { kind: "PJ", situation: "active", country: "Brasil" },
+  const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<ClientForm>({
+    defaultValues: { kind: "PJ", situation: "active", country: "Brasil", country_code: "BR" },
   });
 
   useEffect(() => {
@@ -191,9 +193,27 @@ export function ClientFormPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>País</Label>
-                <Input {...register("country")} placeholder="Brasil" />
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2 space-y-2">
+                  <Label>País</Label>
+                  <Input
+                    list="countries-list" placeholder="Brasil" autoComplete="off"
+                    {...register("country", {
+                      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                        const code = countryCodeFor(e.target.value);
+                        if (code) setValue("country_code", code, { shouldDirty: true });
+                      },
+                    })}
+                  />
+                  <datalist id="countries-list">{COUNTRIES.map((c) => <option key={c.code} value={c.name} />)}</datalist>
+                </div>
+                <div className="space-y-2">
+                  <Label>Código (ISO)</Label>
+                  <Input
+                    maxLength={2} placeholder="BR" className="uppercase"
+                    {...register("country_code", { required: true, pattern: /^[A-Za-z]{2}$/, setValueAs: (v: string) => (v ?? "").toUpperCase() })}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>

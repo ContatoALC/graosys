@@ -3,17 +3,21 @@ import { AppDataSource } from "../../database/data-source";
 import { Client } from "../entities/Client";
 import { ILike } from "typeorm";
 import { pickFields } from "../../utils/pickFields";
+import { resolveCountry } from "../../utils/countries";
 
 const ALLOWED_FIELDS: (keyof Client)[] = [
   "nickname", "name", "address", "number", "complement", "district", "city", "state",
-  "zip_code", "country", "kind", "cnpj_cpf", "ins_est", "ins_mun", "telephone", "cellphone",
+  "zip_code", "country", "country_code", "kind", "cnpj_cpf", "ins_est", "ins_mun", "telephone", "cellphone",
   "situation", "account", "contacts",
 ];
 
 export class ClientController {
   async create(req: Request, res: Response) {
     const clientRepo = AppDataSource.getRepository(Client);
-    const client = clientRepo.create({ ...pickFields<Client>(req.body, ALLOWED_FIELDS), tenant_id: req.user.tenant_id });
+    const input = pickFields<Client>(req.body, ALLOWED_FIELDS);
+    const place = resolveCountry(input.country, input.country_code);
+    if ("error" in place) return res.status(400).json({ error: place.error });
+    const client = clientRepo.create({ ...input, ...place, tenant_id: req.user.tenant_id });
     await clientRepo.save(client);
     return res.status(201).json(client);
   }
@@ -57,7 +61,14 @@ export class ClientController {
     const clientRepo = AppDataSource.getRepository(Client);
     const client = await clientRepo.findOne({ where: { id: req.params.id, tenant_id: req.user.tenant_id } });
     if (!client) return res.status(404).json({ error: "Cliente não encontrado" });
-    Object.assign(client, pickFields<Client>(req.body, ALLOWED_FIELDS));
+    const input = pickFields<Client>(req.body, ALLOWED_FIELDS);
+    if (input.country !== undefined || input.country_code !== undefined) {
+      // Trocar o país sem informar o código faz o código ser inferido; desconhecido exige o código.
+      const place = resolveCountry(input.country ?? client.country, input.country_code ?? (input.country !== undefined ? undefined : client.country_code));
+      if ("error" in place) return res.status(400).json({ error: place.error });
+      Object.assign(input, place);
+    }
+    Object.assign(client, input);
     await clientRepo.save(client);
     return res.json(client);
   }

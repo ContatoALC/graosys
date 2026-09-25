@@ -1,0 +1,53 @@
+// Mesma lista do servidor (utils/countries.ts). Nome em português -> código ISO 3166-1 alfa-2.
+export const COUNTRIES = [
+  { name: "Brasil", code: "BR" },
+  { name: "Argentina", code: "AR" },
+  { name: "Paraguai", code: "PY" },
+  { name: "Uruguai", code: "UY" },
+  { name: "Bolívia", code: "BO" },
+  { name: "Chile", code: "CL" },
+  { name: "Colômbia", code: "CO" },
+  { name: "Peru", code: "PE" },
+  { name: "Venezuela", code: "VE" },
+  { name: "Equador", code: "EC" },
+  { name: "México", code: "MX" },
+  { name: "Estados Unidos", code: "US" },
+  { name: "Canadá", code: "CA" },
+  { name: "China", code: "CN" },
+  { name: "Japão", code: "JP" },
+  { name: "Coreia do Sul", code: "KR" },
+  { name: "Índia", code: "IN" },
+  { name: "Vietnã", code: "VN" },
+  { name: "Tailândia", code: "TH" },
+  { name: "Indonésia", code: "ID" },
+  { name: "Malásia", code: "MY" },
+  { name: "Filipinas", code: "PH" },
+  { name: "Bangladesh", code: "BD" },
+  { name: "Paquistão", code: "PK" },
+  { name: "Turquia", code: "TR" },
+  { name: "Egito", code: "EG" },
+  { name: "Marrocos", code: "MA" },
+  { name: "Argélia", code: "DZ" },
+  { name: "Arábia Saudita", code: "SA" },
+  { name: "Emirados Árabes Unidos", code: "AE" },
+  { name: "Irã", code: "IR" },
+  { name: "Iraque", code: "IQ" },
+  { name: "Israel", code: "IL" },
+  { name: "Rússia", code: "RU" },
+  { name: "Ucrânia", code: "UA" },
+  { name: "Alemanha", code: "DE" },
+  { name: "França", code: "FR" },
+  { name: "Itália", code: "IT" },
+  { name: "Espanha", code: "ES" },
+  { name: "Portugal", code: "PT" },
+  { name: "Países Baixos", code: "NL" },
+  { name: "Bélgica", code: "BE" },
+  { name: "Reino Unido", code: "GB" },
+  { name: "Polônia", code: "PL" },
+];
+
+const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+
+export function countryCodeFor(name: string): string | undefined {
+  return COUNTRIES.find((c) => norm(c.name) === norm(name))?.code;
+}

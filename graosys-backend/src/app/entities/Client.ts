@@ -44,6 +44,9 @@ export class Client {
   @Column({ type: "varchar", default: "Brasil" })
   country: string;
 
+  @Column({ type: "varchar", default: "BR" })
+  country_code: string; // ISO 3166-1 alfa-2
+
   @Column()
   kind: string; // PF | PJ
 
