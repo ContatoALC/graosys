@@ -10,6 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/services/api";
 import { ClientPicker } from "@/components/ClientPicker";
+import { useAuth } from "@/contexts/AuthContext";
+import { PriceModeSection } from "./PriceModeSection";
+import { FixationsPanel } from "./FixationsPanel";
 
 interface ContractForm {
   number_broker: string;
@@ -26,6 +29,13 @@ interface ContractForm {
   quantity: string;
   type_currency: string;
   price: string;
+  price_type: string;
+  fixation_mode: string;
+  cbot_reference: string;
+  fixation_deadline: string;
+  frame_chicago: string;
+  frame_premium: string;
+  frame_exchange: string;
   type_icms: string;
   icms: string;
   payment: string;
@@ -57,11 +67,16 @@ export function ContractFormPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [products, setProducts] = useState<any[]>([]);
+  const [saved, setSaved] = useState<any | null>(null);
+  const { user } = useAuth();
+  const canEditContract = user?.role === "admin" || user?.role === "superadmin" || !!user?.permissions?.contracts?.includes("edit");
 
-  const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<ContractForm>({
+  const { register, handleSubmit, reset, control, setValue, watch, formState: { errors } } = useForm<ContractForm>({
     defaultValues: {
       type_quantity: "sc",
       type_currency: "BRL",
+      price_type: "fixed",
+      fixation_mode: "frame",
       seller: [{ value: "" }],
       buyer: [{ value: "" }],
       list_email_seller: [],
@@ -87,7 +102,15 @@ export function ContractFormPage() {
           list_email_buyer: (d.list_email_buyer || []).map((v: string) => ({ value: v })),
           quantity: String(d.quantity ?? ""),
           price: String(d.price ?? ""),
+          price_type: d.price_type ?? "fixed",
+          fixation_mode: d.fixation_mode ?? "frame",
+          cbot_reference: d.cbot_reference ?? "",
+          fixation_deadline: d.fixation_deadline ?? "",
+          frame_chicago: d.frame_chicago === null || d.frame_chicago === undefined ? "" : String(Number(d.frame_chicago)),
+          frame_premium: d.frame_premium === null || d.frame_premium === undefined ? "" : String(Number(d.frame_premium)),
+          frame_exchange: d.frame_exchange === null || d.frame_exchange === undefined ? "" : String(Number(d.frame_exchange)),
         });
+        setSaved(d);
       }).catch(console.error);
     }
   }, [id]);
@@ -116,8 +139,17 @@ export function ContractFormPage() {
         list_email_seller: data.list_email_seller.map((e) => e.value).filter(Boolean),
         list_email_buyer: data.list_email_buyer.map((e) => e.value).filter(Boolean),
         quantity: Number(data.quantity),
-        price: Number(data.price),
-      };
+      } as any;
+      const toFix = data.price_type === "to_fix";
+      const frame = toFix && data.fixation_mode === "frame";
+      const numOrNull = (v: string) => (v === "" || v === undefined ? null : Number(v));
+      if (toFix) { delete payload.price; } else { payload.price = Number(data.price); }
+      payload.fixation_mode = toFix ? data.fixation_mode : null;
+      payload.fixation_deadline = toFix ? data.fixation_deadline : null;
+      payload.cbot_reference = frame ? data.cbot_reference || null : null;
+      payload.frame_chicago = frame ? numOrNull(data.frame_chicago) : null;
+      payload.frame_premium = frame ? numOrNull(data.frame_premium) : null;
+      payload.frame_exchange = frame && data.type_currency !== "USD" ? numOrNull(data.frame_exchange) : null;
       if (isEditing) {
         await api.patch(`/api/contracts/${id}`, payload);
       } else {
@@ -307,10 +339,20 @@ export function ContractFormPage() {
                   )} />
                 </div>
               </div>
+              <PriceModeSection
+                priceType={watch("price_type")} mode={watch("fixation_mode")} currency={watch("type_currency")}
+                locked={isEditing && Number(saved?.fixed_quantity) > 0}
+                onPriceType={(v) => setValue("price_type", v, { shouldDirty: true })} onMode={(v) => setValue("fixation_mode", v, { shouldDirty: true })}
+                register={register as any} hasError={!!errors.fixation_deadline}
+              />
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Preço *</Label>
-                  <Input type="number" step="0.0001" {...register("price", { required: true })} className={errors.price ? "border-destructive" : ""} />
+                  {watch("price_type") === "to_fix" ? (
+                    <><Label>Preço</Label><p className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">Definido pelas fixações. O preço médio aparece após o primeiro lançamento.</p></>
+                  ) : (
+                    <><Label>Preço *</Label>
+                    <Input type="number" step="0.0001" {...register("price", { required: watch("price_type") !== "to_fix" })} className={errors.price ? "border-destructive" : ""} /></>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Pagamento</Label>
@@ -475,6 +517,13 @@ export function ContractFormPage() {
             <Button type="button" variant="outline" onClick={() => navigate("/contracts")}>Cancelar</Button>
           </div>
         </form>
+
+        {isEditing && saved?.price_type === "to_fix" && (
+          <FixationsPanel
+            contract={saved} canEdit={canEditContract}
+            onChanged={() => api.get(`/api/contracts/${id}`).then((r) => setSaved(r.data)).catch(console.error)}
+          />
+        )}
       </div>
     </div>
   );

@@ -4,6 +4,8 @@ import { GrainContract } from "../entities/GrainContract";
 import { ILike } from "typeorm";
 import { pickFields } from "../../utils/pickFields";
 import { nextContractNumber } from "../../utils/contractNumber";
+import { applyTotals } from "../../services/contractTotals";
+import { ContractFixation } from "../entities/ContractFixation";
 
 const ALLOWED_FIELDS: (keyof GrainContract)[] = [
   "number_broker", "number_contract", "seller", "buyer", "list_email_seller", "list_email_buyer",
@@ -17,19 +19,53 @@ const ALLOWED_FIELDS: (keyof GrainContract)[] = [
   "owner_contract", "total_contract_value", "commission_contract",
   "commission_seller_contract_value", "commission_buyer_contract_value", "total_received",
   "status_received", "expected_receipt_date", "table_id",
+  "price_type", "fixation_mode", "cbot_reference", "fixation_deadline", "frame_chicago", "frame_premium", "frame_exchange",
 ];
+
+const PRICE_TYPES = ["fixed", "to_fix"];
+const FIXATION_MODES = ["market", "frame"];
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+// Regras do contrato a fixar; devolve mensagem de erro ou null.
+function validatePricing(c: Partial<GrainContract>): string | null {
+  if (c.price_type !== undefined && !PRICE_TYPES.includes(c.price_type)) return "Tipo de preço inválido";
+  if (c.price_type === "to_fix") {
+    if (!c.fixation_mode || !FIXATION_MODES.includes(c.fixation_mode)) return "Informe a modalidade de fixação (Mercado ou Frame)";
+    if (!c.fixation_deadline || !DATE_RE.test(String(c.fixation_deadline))) return "Informe o prazo para fixação";
+  }
+  return null;
+}
+
+// Vazios viram nulo e contratos de preço fixo não carregam dados de fixação.
+function normalizePricing(c: GrainContract) {
+  for (const k of ["frame_chicago", "frame_premium", "frame_exchange"] as const) {
+    if ((c[k] as unknown) === "" || c[k] === undefined) (c as any)[k] = null;
+  }
+  if (c.price_type !== "to_fix") {
+    c.price_type = "fixed"; c.fixation_mode = null; c.cbot_reference = null; c.fixation_deadline = null;
+    c.frame_chicago = null; c.frame_premium = null; c.frame_exchange = null; c.fixed_quantity = 0;
+  } else if (c.price === undefined || c.price === null || (c.price as unknown) === "") {
+    c.price = 0;
+  }
+}
 
 export class GrainContractController {
   async create(req: Request, res: Response) {
     const contractRepo = AppDataSource.getRepository(GrainContract);
+    const input = pickFields<GrainContract>(req.body, ALLOWED_FIELDS);
+    const pricingError = validatePricing(input);
+    if (pricingError) return res.status(400).json({ error: pricingError });
     const contract = contractRepo.create({
-      ...pickFields<GrainContract>(req.body, ALLOWED_FIELDS),
+      ...input,
       tenant_id: req.user.tenant_id,
       status: {
         status_current: "Ativo",
         history: [{ date: new Date().toLocaleDateString("pt-BR"), time: new Date().toLocaleTimeString("pt-BR"), status: "Ativo", owner_change: req.user.name }],
       },
     });
+    normalizePricing(contract);
+    contract.fixed_quantity = 0;
+    applyTotals(contract);
     await contractRepo.save(contract);
     return res.status(201).json(contract);
   }
@@ -52,8 +88,7 @@ export class GrainContractController {
       }
 
       const now = new Date();
-      return repo.save(
-        repo.create({
+      const draft = repo.create({
           ...pickFields<GrainContract>(source, ALLOWED_FIELDS),
           tenant_id,
           number_contract: number,
@@ -62,13 +97,16 @@ export class GrainContractController {
           number_external_contract_seller: null,
           total_received: null,
           status_received: null,
+          fixed_quantity: 0,
+          ...(source.price_type === "to_fix" ? { price: 0, total_contract_value: 0 } : {}),
           expected_receipt_date: null,
           status: {
             status_current: "Ativo",
             history: [{ date: now.toLocaleDateString("pt-BR"), time: now.toLocaleTimeString("pt-BR"), status: "Ativo", owner_change: req.user.name }],
           },
-        })
-      );
+        });
+      applyTotals(draft);
+      return repo.save(draft);
     });
     if (!clone) return res.status(404).json({ error: "Contrato não encontrado" });
     return res.status(201).json(clone);
@@ -104,7 +142,22 @@ export class GrainContractController {
     const contractRepo = AppDataSource.getRepository(GrainContract);
     const contract = await contractRepo.findOne({ where: { id: req.params.id, tenant_id: req.user.tenant_id } });
     if (!contract) return res.status(404).json({ error: "Contrato não encontrado" });
-    Object.assign(contract, pickFields<GrainContract>(req.body, ALLOWED_FIELDS));
+    const input = pickFields<GrainContract>(req.body, ALLOWED_FIELDS);
+    const pricingError = validatePricing({ ...contract, ...input });
+    if (pricingError) return res.status(400).json({ error: pricingError });
+
+    // Com fixações lançadas, o modo de preço e a quantidade não podem contradizê-las.
+    const fixationCount = await AppDataSource.getRepository(ContractFixation).count({ where: { contract_id: contract.id, tenant_id: req.user.tenant_id } });
+    if (fixationCount > 0) {
+      if (input.price_type !== undefined && input.price_type !== contract.price_type) return res.status(400).json({ error: "Não é possível mudar o tipo de preço: há fixações lançadas. Exclua-as antes." });
+      if (input.fixation_mode !== undefined && input.fixation_mode !== contract.fixation_mode) return res.status(400).json({ error: "Não é possível mudar a modalidade: há fixações lançadas." });
+      if (input.quantity !== undefined && Number(input.quantity) + 1e-6 < Number(contract.fixed_quantity)) return res.status(400).json({ error: "A quantidade não pode ser menor que a já fixada." });
+      delete (input as any).price; // o preço de um contrato a fixar vem das fixações
+    }
+
+    Object.assign(contract, input);
+    normalizePricing(contract);
+    applyTotals(contract);
     await contractRepo.save(contract);
     return res.json(contract);
   }

@@ -112,7 +112,14 @@ export function ContractsPage() {
                 ) : (
                   contracts.map((c) => (
                     <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.number_contract}</TableCell>
+                      <TableCell className="font-medium">
+                        {c.number_contract}
+                        {c.price_type === "to_fix" && (
+                          <Badge variant="outline" className="ml-2" title="Contrato a fixar">
+                            A fixar · {Math.round((Number(c.fixed_quantity) / (Number(c.quantity) || 1)) * 100)}%
+                          </Badge>
+                        )}
+                      </TableCell>
                       <TableCell>{c.name_product}</TableCell>
                       <TableCell>{c.crop}</TableCell>
                       <TableCell className="text-xs">{Array.isArray(c.seller) ? c.seller.join(", ") : c.seller}</TableCell>

@@ -18,7 +18,8 @@
     "migration:revert": "npm run typeorm -- -d ./src/database/migration-data-source.ts migration:revert",
     "migration:show": "npm run typeorm -- -d ./src/database/migration-data-source.ts migration:show",
     "migration:drift": "npm run typeorm -- -d ./src/database/migration-data-source.ts schema:log",
-    "vercel-build": "node scripts/migrate-on-deploy.js"
+    "vercel-build": "node scripts/migrate-on-deploy.js",
+    "recompute:totals": "ts-node --transpile-only src/database/recompute-totals.ts"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

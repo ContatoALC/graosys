@@ -119,7 +119,12 @@ export function ExecutionPage() {
                     <TableRow key={c.id}>
                       <TableCell className="font-medium"><button type="button" className="text-left underline-offset-2 hover:underline" title="Ver envios" onClick={() => setEmailContract(c)}>{c.number_contract}</button></TableCell>
                       <TableCell>{c.name_product}<br /><span className="text-xs text-muted-foreground">{c.crop}</span></TableCell>
-                      <TableCell>{c.quantity} {c.type_quantity}</TableCell>
+                      <TableCell>
+                        {c.quantity} {c.type_quantity}
+                        {c.price_type === "to_fix" && (
+                          <p className="text-xs text-muted-foreground">A fixar: {Math.round((Number(c.fixed_quantity) / (Number(c.quantity) || 1)) * 100)}% fixado</p>
+                        )}
+                      </TableCell>
                       <TableCell>{c.pickup_location}</TableCell>
                       <TableCell className="text-xs">{formatDate(c.initial_pickup_date)} — {formatDate(c.final_pickup_date)}</TableCell>
                       <TableCell>

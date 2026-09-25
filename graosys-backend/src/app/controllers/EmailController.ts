@@ -4,6 +4,7 @@ import { AppDataSource } from "../../database/data-source";
 import { Tenant } from "../entities/Tenant";
 import { GrainContract } from "../entities/GrainContract";
 import { ContractEmailLog } from "../entities/ContractEmailLog";
+import { ContractFixation } from "../entities/ContractFixation";
 import { getTenantMailer } from "../../services/tenantMailer";
 import { generateContractPdf, getPdfSettings } from "../../services/contractPdf";
 
@@ -64,6 +65,9 @@ export class EmailController {
     const bccList = isLocal ? [process.env.SMTP_USER!].filter(Boolean) : mailer.bcc;
     const transporter = mailer.transporter;
     const layout = await getPdfSettings(tenant_id);
+    const fixations = contract.price_type === "to_fix"
+      ? await AppDataSource.getRepository(ContractFixation).find({ where: { tenant_id, contract_id: contract.id }, order: { fixation_date: "ASC", created_at: "ASC" } })
+      : [];
 
     const contractHtml = buildContractHtml(contract, tenant);
 
@@ -88,7 +92,7 @@ export class EmailController {
           bcc: bccList,
           subject: partySubject,
           html: contractHtml(p.role, names, mailer.signature),
-          attachments: [{ filename: `contrato_${safeFile(contract.number_contract)}_${p.role.toLowerCase()}.pdf`, content: await generateContractPdf(contract, tenant, p.role, layout) }],
+          attachments: [{ filename: `contrato_${safeFile(contract.number_contract)}_${p.role.toLowerCase()}.pdf`, content: await generateContractPdf(contract, tenant, p.role, layout, fixations) }],
         });
         sentTo.push(...p.emails);
       } catch (e: any) {

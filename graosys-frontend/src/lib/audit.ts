@@ -1,7 +1,7 @@
 const ACTIONS: Record<string, string> = {
   "auth.login": "Login", "auth.login_failed": "Falha de login", "auth.logout": "Logout", "auth.password_reset": "Senha alterada",
   "contracts.create": "Contrato criado", "contracts.update": "Contrato editado", "contracts.delete": "Contrato excluído",
-  "contracts.clone": "Contrato clonado", "contracts.status_change": "Status do contrato alterado", "contracts.email_send": "Contrato enviado por e-mail",
+  "contracts.clone": "Contrato clonado", "contracts.fixation_add": "Fixação de preço lançada", "contracts.fixation_remove": "Fixação de preço excluída", "contracts.status_change": "Status do contrato alterado", "contracts.email_send": "Contrato enviado por e-mail",
   "clients.create": "Cliente criado", "clients.update": "Cliente editado", "clients.delete": "Cliente excluído",
   "billings.create": "Recebimento criado", "billings.update": "Recebimento editado", "billings.delete": "Recebimento excluído",
   "products.create": "Produto criado", "products.update": "Produto editado", "products.delete": "Produto excluído",

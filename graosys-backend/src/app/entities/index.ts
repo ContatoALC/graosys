@@ -12,5 +12,6 @@ import { Lead } from "./Lead";
 import { ContractEmailLog } from "./ContractEmailLog";
 import { AuditLog } from "./AuditLog";
 import { UserSession } from "./UserSession";
+import { ContractFixation } from "./ContractFixation";
 
-export const entitiesDir = [Tenant, User, Client, GrainContract, Product, ProductTable, Billing, Broker, TenantEmailSettings, TenantPdfSettings, Lead, ContractEmailLog, AuditLog, UserSession];
+export const entitiesDir = [Tenant, User, Client, GrainContract, Product, ProductTable, Billing, Broker, TenantEmailSettings, TenantPdfSettings, Lead, ContractEmailLog, AuditLog, UserSession, ContractFixation];

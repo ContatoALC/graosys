@@ -57,6 +57,31 @@ export class GrainContract {
   @Column("decimal", { precision: 15, scale: 4 })
   price: number;
 
+  // Contrato a fixar: preço final definido por fixações posteriores (modalidades "market" ou "frame").
+  @Column({ type: "varchar", default: "fixed" })
+  price_type: string; // fixed | to_fix
+
+  @Column({ type: "varchar", nullable: true })
+  fixation_mode: string | null; // market | frame
+
+  @Column({ type: "varchar", nullable: true })
+  cbot_reference: string | null; // ex.: SX26
+
+  @Column({ type: "varchar", nullable: true })
+  fixation_deadline: string | null; // AAAA-MM-DD
+
+  @Column("decimal", { precision: 15, scale: 4, nullable: true })
+  frame_chicago: number | null; // já travado no contrato (c/bu); nulo = a fixar
+
+  @Column("decimal", { precision: 15, scale: 4, nullable: true })
+  frame_premium: number | null;
+
+  @Column("decimal", { precision: 15, scale: 6, nullable: true })
+  frame_exchange: number | null;
+
+  @Column("decimal", { precision: 15, scale: 4, default: 0 })
+  fixed_quantity: number;
+
   @Column({ nullable: true })
   type_icms: string;
 
