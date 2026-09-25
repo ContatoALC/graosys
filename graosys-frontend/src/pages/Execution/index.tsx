@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Truck, Eye, Search, RefreshCw, Mail } from "lucide-react";
+import { Truck, Eye, Search, RefreshCw, Mail, Scale } from "lucide-react";
+import { ContractFixationsDialog } from "@/components/ContractFixationsDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { ContractEmailDialog } from "./ContractEmailDialog";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -28,6 +29,7 @@ export function ExecutionPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [emailContract, setEmailContract] = useState<any | null>(null);
+  const [fixContract, setFixContract] = useState<any | null>(null);
   const [emailSummary, setEmailSummary] = useState<Record<string, { seller?: string; buyer?: string }>>({});
   const { user } = useAuth();
   const canSend = user?.role === "admin" || user?.role === "superadmin" || !!user?.permissions?.execution?.includes("edit");
@@ -99,7 +101,7 @@ export function ExecutionPage() {
                   <TableHead>Status Atual</TableHead>
                   <TableHead>Alterar Status</TableHead>
                   <TableHead>Envio</TableHead>
-                  <TableHead className="w-24" />
+                  <TableHead className="w-32" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -122,7 +124,9 @@ export function ExecutionPage() {
                       <TableCell>
                         {c.quantity} {c.type_quantity}
                         {c.price_type === "to_fix" && (
-                          <p className="text-xs text-muted-foreground">A fixar: {Math.round((Number(c.fixed_quantity) / (Number(c.quantity) || 1)) * 100)}% fixado</p>
+                          <button type="button" className="text-xs text-muted-foreground underline-offset-2 hover:underline" title="Ver e lançar fixações" onClick={() => setFixContract(c)}>
+                            A fixar: {Math.round((Number(c.fixed_quantity) / (Number(c.quantity) || 1)) * 100)}% fixado
+                          </button>
                         )}
                       </TableCell>
                       <TableCell>{c.pickup_location}</TableCell>
@@ -160,6 +164,11 @@ export function ExecutionPage() {
                         <Button variant="ghost" size="icon" asChild>
                           <Link to={`/contracts/${c.id}`}><Eye className="h-4 w-4" /></Link>
                         </Button>
+                        {c.price_type === "to_fix" && (
+                          <Button variant="ghost" size="icon" title="Fixações de preço" onClick={() => setFixContract(c)}>
+                            <Scale className="h-4 w-4" />
+                          </Button>
+                        )}
                         {canSend && (
                           <Button variant="ghost" size="icon" title="Enviar contrato por e-mail" onClick={() => setEmailContract(c)}>
                             <Mail className="h-4 w-4" />
@@ -175,6 +184,7 @@ export function ExecutionPage() {
         </Card>
       </div>
 
+      <ContractFixationsDialog contract={fixContract} onClose={() => setFixContract(null)} onChanged={load} />
       <ContractEmailDialog contract={emailContract} canSend={canSend} onClose={() => setEmailContract(null)} onSent={loadSummary} />
     </div>
   );

@@ -10,9 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/services/api";
 import { ClientPicker } from "@/components/ClientPicker";
-import { useAuth } from "@/contexts/AuthContext";
 import { PriceModeSection } from "./PriceModeSection";
-import { FixationsPanel } from "./FixationsPanel";
 
 interface ContractForm {
   number_broker: string;
@@ -68,8 +66,6 @@ export function ContractFormPage() {
   const [error, setError] = useState("");
   const [products, setProducts] = useState<any[]>([]);
   const [saved, setSaved] = useState<any | null>(null);
-  const { user } = useAuth();
-  const canEditContract = user?.role === "admin" || user?.role === "superadmin" || !!user?.permissions?.contracts?.includes("edit");
 
   const { register, handleSubmit, reset, control, setValue, watch, formState: { errors } } = useForm<ContractForm>({
     defaultValues: {
@@ -519,10 +515,9 @@ export function ContractFormPage() {
         </form>
 
         {isEditing && saved?.price_type === "to_fix" && (
-          <FixationsPanel
-            contract={saved} canEdit={canEditContract}
-            onChanged={() => api.get(`/api/contracts/${id}`).then((r) => setSaved(r.data)).catch(console.error)}
-          />
+          <p className="mt-4 rounded-md border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+            As fixações deste contrato são lançadas pela linha do contrato, na lista de <strong>Contratos</strong> ou de <strong>Execução</strong> (botão "Fixações").
+          </p>
         )}
       </div>
     </div>

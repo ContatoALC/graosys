@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Search, FileText, Eye, Copy } from "lucide-react";
+import { Plus, Search, FileText, Eye, Copy, Scale } from "lucide-react";
+import { ContractFixationsDialog } from "@/components/ContractFixationsDialog";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ export function ContractsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const [cloningId, setCloningId] = useState<string | null>(null);
+  const [fixContract, setFixContract] = useState<any | null>(null);
 
   async function cloneContract(c: any) {
     if (!confirm(`Clonar o contrato ${c.number_contract}? O clone recebe o próximo número da sua base.`)) return;
@@ -115,9 +117,9 @@ export function ContractsPage() {
                       <TableCell className="font-medium">
                         {c.number_contract}
                         {c.price_type === "to_fix" && (
-                          <Badge variant="outline" className="ml-2" title="Contrato a fixar">
-                            A fixar · {Math.round((Number(c.fixed_quantity) / (Number(c.quantity) || 1)) * 100)}%
-                          </Badge>
+                          <button type="button" className="ml-2" title="Ver e lançar fixações" onClick={() => setFixContract(c)}>
+                            <Badge variant="outline">A fixar · {Math.round((Number(c.fixed_quantity) / (Number(c.quantity) || 1)) * 100)}%</Badge>
+                          </button>
                         )}
                       </TableCell>
                       <TableCell>{c.name_product}</TableCell>
@@ -136,6 +138,11 @@ export function ContractsPage() {
                           <Button variant="ghost" size="icon" asChild>
                             <Link to={`/contracts/${c.id}`}><Eye className="h-4 w-4" /></Link>
                           </Button>
+                          {c.price_type === "to_fix" && (
+                            <Button variant="ghost" size="icon" title="Fixações de preço" onClick={() => setFixContract(c)}>
+                              <Scale className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button variant="ghost" size="icon" title="Clonar contrato" disabled={cloningId === c.id} onClick={() => cloneContract(c)}>
                             <Copy className="h-4 w-4" />
                           </Button>
@@ -150,6 +157,7 @@ export function ContractsPage() {
         </Card>
       </div>
 
+      <ContractFixationsDialog contract={fixContract} onClose={() => setFixContract(null)} onChanged={() => load(search)} />
     </div>
   );
 }

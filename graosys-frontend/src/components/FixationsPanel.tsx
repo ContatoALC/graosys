@@ -17,7 +17,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 const dmy = (d: string) => d.split("-").reverse().join("/");
 
 // Fixações de um contrato a fixar: saldo, preço médio, lançamento e exclusão. O servidor valida e calcula o preço.
-export function FixationsPanel({ contract, canEdit, onChanged }: { contract: any; canEdit: boolean; onChanged: () => void }) {
+export function FixationsPanel({ contract, canEdit, onChanged, embedded = false }: { contract: any; canEdit: boolean; onChanged: () => void; embedded?: boolean }) {
   const [data, setData] = useState<{ fixations: any[]; summary: any } | null>(null);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({});
@@ -75,8 +75,8 @@ export function FixationsPanel({ contract, canEdit, onChanged }: { contract: any
   );
 
   return (
-    <Card className="mt-6">
-      <CardHeader className="flex-row items-center justify-between space-y-0">
+    <Card className={embedded ? "border-0 shadow-none" : "mt-6"}>
+      <CardHeader className={`flex-row items-center justify-between space-y-0 ${embedded ? "px-0 pt-0" : ""}`}>
         <div>
           <CardTitle className="text-base">Fixações de preço ({isFrame ? "Frame" : "Mercado"})</CardTitle>
           <p className="text-xs text-muted-foreground">
@@ -89,7 +89,7 @@ export function FixationsPanel({ contract, canEdit, onChanged }: { contract: any
           {canEdit && s.balance > 0 && <Button size="sm" onClick={openNew}><Plus className="mr-2 h-4 w-4" />Nova fixação</Button>}
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className={`space-y-4 ${embedded ? "px-0 pb-0" : ""}`}>
         <div>
           <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary transition-all" style={{ width: `${Math.round(s.progress * 100)}%` }} /></div>
           <p className="mt-1 text-xs text-muted-foreground">{Math.round(s.progress * 100)}% fixado</p>
