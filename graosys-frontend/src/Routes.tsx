@@ -31,6 +31,12 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
+function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) return null;
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <>{children}</>;
+}
+
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   return user?.role === "admin" || user?.role === "superadmin" ? <>{children}</> : <Navigate to="/dashboard" replace />;
@@ -44,7 +50,7 @@ function SuperadminRoute({ children }: { children: React.ReactNode }) {
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
+      <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
       <Route path="/" element={<PrivateRoute><AppLayout /></PrivateRoute>}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
