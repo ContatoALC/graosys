@@ -11,6 +11,8 @@ import { DashboardController } from "../controllers/DashboardController";
 import { BrokerController } from "../controllers/BrokerController";
 import { EmailSettingsController } from "../controllers/EmailSettingsController";
 import { PdfSettingsController } from "../controllers/PdfSettingsController";
+import { AuditController } from "../controllers/AuditController";
+import { auditMiddleware } from "../middlewares/auditMiddleware";
 import { LeadController } from "../controllers/LeadController";
 import { PlatformController } from "../controllers/PlatformController";
 import { EmailController } from "../controllers/EmailController";
@@ -28,6 +30,7 @@ const dashboard = new DashboardController();
 const email = new EmailController();
 const platform = new PlatformController();
 const lead = new LeadController();
+const audit = new AuditController();
 const pdfSettings = new PdfSettingsController();
 const emailSettings = new EmailSettingsController();
 const broker = new BrokerController();
@@ -38,8 +41,11 @@ router.post("/api/tenants/register", tenant.register); // Cadastro de nova corre
 
 // Protegido (requer JWT)
 router.use(authMiddleware);
+router.use(auditMiddleware);
 
 // Auth
+router.post("/api/auth/heartbeat", session.heartbeat);
+router.post("/api/auth/logout", session.logout);
 router.post("/api/auth/reset-password", session.resetPassword);
 router.get("/api/auth/profile", user.getProfile);
 
@@ -99,7 +105,15 @@ router.post("/api/brokers", requireRole("admin"), broker.create);
 router.patch("/api/brokers/:id", requireRole("admin"), broker.update);
 router.delete("/api/brokers/:id", requireRole("admin"), broker.delete);
 
+// Auditoria e sessões da corretora (Admin)
+router.get("/api/audit", requireRole("admin"), audit.list);
+router.get("/api/audit/actions", requireRole("admin"), audit.actions);
+router.get("/api/sessions/overview", requireRole("admin"), audit.sessions);
+
 // Painel da plataforma (superadmin)
+router.get("/api/platform/audit", requireSuperadmin, audit.platformList);
+router.get("/api/platform/audit/actions", requireSuperadmin, audit.platformActions);
+router.get("/api/platform/sessions/overview", requireSuperadmin, audit.platformSessions);
 router.get("/api/platform/summary", requireSuperadmin, platform.summary);
 router.get("/api/platform/plans", requireSuperadmin, platform.plans);
 router.get("/api/platform/tenants", requireSuperadmin, platform.listTenants);

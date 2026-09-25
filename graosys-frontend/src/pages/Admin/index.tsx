@@ -7,6 +7,8 @@ import {
   Handshake,
   Mail,
   FileImage,
+  ScrollText,
+  Activity,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -53,6 +55,20 @@ const adminModules = [
     icon: FileImage,
     path: "/admin/pdf-layout",
     color: "bg-rose-100 text-rose-700",
+  },
+  {
+    label: "Auditoria",
+    description: "Trilha de ações dos usuários",
+    icon: ScrollText,
+    path: "/admin/audit",
+    color: "bg-slate-100 text-slate-700",
+  },
+  {
+    label: "Usuários Online",
+    description: "Quem está logado e métricas de acesso",
+    icon: Activity,
+    path: "/admin/sessions",
+    color: "bg-emerald-100 text-emerald-700",
   },
   {
     label: "Mesas",

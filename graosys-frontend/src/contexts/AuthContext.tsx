@@ -38,6 +38,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   }, []);
 
+  // Batimento de presença: alimenta o painel de usuários online.
+  useEffect(() => {
+    if (!user) return;
+    const beat = () => { if (document.visibilityState === "visible") api.post("/api/auth/heartbeat").catch(() => undefined); };
+    beat();
+    const timer = setInterval(beat, 60_000);
+    document.addEventListener("visibilitychange", beat);
+    return () => { clearInterval(timer); document.removeEventListener("visibilitychange", beat); };
+  }, [user?.id]);
+
   const signIn = useCallback(async (email: string, password: string) => {
     const response = await api.post("/api/auth/login", { email, password });
     const { token: newToken, user: newUser } = response.data;
@@ -50,6 +60,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(() => {
+    // Registra o encerramento da sessão (melhor esforço; não bloqueia a saída).
+    api.post("/api/auth/logout").catch(() => undefined);
     setToken(null);
     setUser(null);
     localStorage.removeItem("@graosys:token");

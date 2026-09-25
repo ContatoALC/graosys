@@ -19,6 +19,10 @@ import { AdminBrokersPage } from "@/pages/Admin/Brokers";
 import { AdminEmailSettingsPage } from "@/pages/Admin/EmailSettings";
 import { AdminPdfLayoutPage } from "@/pages/Admin/PdfLayout";
 import { AdminTablesPage } from "@/pages/Admin/Tables";
+import { AdminAuditPage } from "@/pages/Admin/Audit";
+import { AdminSessionsPage } from "@/pages/Admin/Sessions";
+import { PlatformAuditPage } from "@/pages/Platform/Audit";
+import { PlatformSessionsPage } from "@/pages/Platform/Sessions";
 import { PlatformPage } from "@/pages/Platform";
 import { PlatformLeadsPage } from "@/pages/Platform/Leads";
 import { PlatformLeadDetailPage } from "@/pages/Platform/Leads/LeadDetail";
@@ -71,8 +75,12 @@ export function AppRoutes() {
         <Route path="admin/brokers" element={<AdminRoute><AdminBrokersPage /></AdminRoute>} />
         <Route path="admin/email" element={<AdminRoute><AdminEmailSettingsPage /></AdminRoute>} />
         <Route path="admin/pdf-layout" element={<AdminRoute><AdminPdfLayoutPage /></AdminRoute>} />
+        <Route path="admin/audit" element={<AdminRoute><AdminAuditPage /></AdminRoute>} />
+        <Route path="admin/sessions" element={<AdminRoute><AdminSessionsPage /></AdminRoute>} />
         <Route path="admin/tables" element={<AdminRoute><AdminTablesPage /></AdminRoute>} />
         <Route path="platform" element={<SuperadminRoute><PlatformPage /></SuperadminRoute>} />
+        <Route path="platform/audit" element={<SuperadminRoute><PlatformAuditPage /></SuperadminRoute>} />
+        <Route path="platform/sessions" element={<SuperadminRoute><PlatformSessionsPage /></SuperadminRoute>} />
         <Route path="platform/leads" element={<SuperadminRoute><PlatformLeadsPage /></SuperadminRoute>} />
         <Route path="platform/leads/:id" element={<SuperadminRoute><PlatformLeadDetailPage /></SuperadminRoute>} />
         <Route path="platform/tenants/:id" element={<SuperadminRoute><PlatformTenantDetailPage /></SuperadminRoute>} />

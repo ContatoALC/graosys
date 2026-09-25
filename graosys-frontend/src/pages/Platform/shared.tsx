@@ -23,6 +23,8 @@ export function PlatformTabs() {
   const tabs = [
     { to: "/platform", label: "Corretoras", active: pathname === "/platform" || pathname.startsWith("/platform/tenants") },
     { to: "/platform/leads", label: "Prospecção", active: pathname.startsWith("/platform/leads") },
+    { to: "/platform/audit", label: "Auditoria", active: pathname.startsWith("/platform/audit") },
+    { to: "/platform/sessions", label: "Sessões", active: pathname.startsWith("/platform/sessions") },
   ];
   return (
     <div className="flex gap-1 border-b px-6">

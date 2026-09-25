@@ -9,6 +9,7 @@ interface TokenPayload {
   role: string;
   tenant_id: string;
   tenant_slug: string;
+  sid?: string;
   permissions: Record<string, string[]>;
   iat: number;
   exp: number;
