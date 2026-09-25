@@ -1,0 +1,49 @@
+name: Backend CI
+
+on:
+  pull_request:
+    paths: ["graosys-backend/**", ".github/workflows/backend-ci.yml"]
+  push:
+    branches: [main]
+    paths: ["graosys-backend/**", ".github/workflows/backend-ci.yml"]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: graosys-backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: graosys
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      TYPEORM_HOST: localhost
+      TYPEORM_PORT: "5432"
+      TYPEORM_USERNAME: postgres
+      TYPEORM_PASSWORD: ci
+      TYPEORM_DATABASE: graosys
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: graosys-backend/package-lock.json
+      - run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Migrations em banco vazio
+        run: npm run migration:run
+      - name: Migrations são idempotentes (2ª execução)
+        run: npm run migration:run
+      - name: Entidades e migrations estão alinhadas (sem drift)
+        run: |
+          out=$(npm run --silent migration:drift 2>&1)
+          echo "$out"
+          echo "$out" | grep -q "Your schema is up to date" || { echo "::error::Entidades divergem das migrations. Crie uma migration (npm run migration:create --name=...)."; exit 1; }

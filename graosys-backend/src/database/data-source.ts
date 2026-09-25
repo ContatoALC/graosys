@@ -28,7 +28,6 @@ export const AppDataSource = new DataSource(
         synchronize: SYNCHRONIZE,
         logging: false,
         entities: entitiesDir,
-        migrations: ["src/database/migrations/*.ts"],
         ssl: SSL_VALUE,
         extra: {
           // Ambiente serverless: cada invocação pode abrir sua própria
@@ -50,7 +49,6 @@ export const AppDataSource = new DataSource(
         synchronize: SYNCHRONIZE,
         logging: false,
         entities: entitiesDir,
-        migrations: ["src/database/migrations/*.ts"],
         // Host remoto (Neon etc.) sempre com SSL; local só se TYPEORM_SSL=true.
         ssl: !isLocalHost || process.env.TYPEORM_SSL === "true" ? SSL_VALUE : false,
         extra: {

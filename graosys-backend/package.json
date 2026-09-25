@@ -12,13 +12,15 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "seed:leads": "ts-node --transpile-only src/database/seed-leads.ts",
     "seed": "ts-node --transpile-only src/database/seed.ts",
-    "typeorm": "ts-node-dev ./node_modules/typeorm/cli.js",
-    "migration:create": "npm run typeorm -- -d ./src/database/data-source.ts migration:create",
-    "migration:run": "npm run typeorm -- -d ./src/database/data-source.ts migration:run",
-    "migration:revert": "npm run typeorm -- -d ./src/database/data-source.ts migration:revert"
+    "typeorm": "ts-node --transpile-only ./node_modules/typeorm/cli.js",
+    "migration:create": "ts-node --transpile-only ./node_modules/typeorm/cli.js migration:create ./src/database/migrations/$npm_config_name",
+    "migration:run": "npm run typeorm -- -d ./src/database/migration-data-source.ts migration:run",
+    "migration:revert": "npm run typeorm -- -d ./src/database/migration-data-source.ts migration:revert",
+    "migration:show": "npm run typeorm -- -d ./src/database/migration-data-source.ts migration:show",
+    "migration:drift": "npm run typeorm -- -d ./src/database/migration-data-source.ts schema:log",
+    "vercel-build": "node scripts/migrate-on-deploy.js"
   },
   "dependencies": {
-    "@types/pdfmake": "^0.3.3",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
@@ -40,6 +42,7 @@
     "@types/jsonwebtoken": "^9.0.3",
     "@types/node": "^16.11.10",
     "@types/nodemailer": "^6.4.17",
+    "@types/pdfmake": "^0.3.3",
     "@types/sanitize-html": "^2.16.1",
     "@types/uuid": "^9.0.3",
     "ts-node": "^10.7.0",
