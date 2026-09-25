@@ -70,6 +70,8 @@ router.get("/api/contracts/report", requirePermission("reports", "view"), contra
 router.get("/api/contracts", requirePermission("contracts", "view"), contract.getAll);
 router.get("/api/contracts/:id", requirePermission("contracts", "view"), contract.getById);
 router.post("/api/contracts", requirePermission("contracts", "create"), contract.create);
+router.post("/api/contracts/:id/clone", requirePermission("contracts", "create"), contract.clone);
+router.get("/api/contracts/:id/email-logs", requirePermission("execution", "view"), email.logs);
 router.patch("/api/contracts/:id", requirePermission("contracts", "edit"), contract.update);
 router.patch("/api/contracts/:id/status", requirePermission("execution", "edit"), contract.updateStatus);
 router.delete("/api/contracts/:id", requireRole("admin"), contract.delete);
@@ -126,7 +128,8 @@ router.put("/api/email-settings", requireRole("admin"), emailSettings.save);
 router.post("/api/email-settings/test", requireRole("admin"), emailSettings.test);
 
 // Email
-router.post("/api/email/send-contract", requirePermission("contracts", "view"), email.sendContractEmail);
+router.get("/api/email/summary", requirePermission("execution", "view"), email.summary);
+router.post("/api/email/send-contract", requirePermission("execution", "edit"), email.sendContractEmail);
 router.post("/api/email/send-custom", requireRole("admin"), email.sendCustomEmail);
 
 // Mesas de produtos (Admin)

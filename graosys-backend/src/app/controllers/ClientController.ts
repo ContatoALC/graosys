@@ -22,9 +22,12 @@ export class ClientController {
     const { search, situation, page = "1", limit = "50" } = req.query;
     const clientRepo = AppDataSource.getRepository(Client);
 
-    const where: any = { tenant_id: req.user.tenant_id };
-    if (situation) where.situation = situation;
-    if (search) where.name = ILike(`%${search}%`);
+    const base: any = { tenant_id: req.user.tenant_id };
+    if (situation) base.situation = situation;
+    const term = search ? `%${String(search).trim()}%` : "";
+    const where = term
+      ? [{ ...base, name: ILike(term) }, { ...base, nickname: ILike(term) }, { ...base, cnpj_cpf: ILike(term) }]
+      : base;
 
     const [clients, total] = await clientRepo.findAndCount({
       where,

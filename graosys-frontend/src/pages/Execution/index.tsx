@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Truck, Eye, Search, RefreshCw } from "lucide-react";
+import { Truck, Eye, Search, RefreshCw, Mail } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { ContractEmailDialog } from "./ContractEmailDialog";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +27,14 @@ export function ExecutionPage() {
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [emailContract, setEmailContract] = useState<any | null>(null);
+  const [emailSummary, setEmailSummary] = useState<Record<string, { seller?: string; buyer?: string }>>({});
+  const { user } = useAuth();
+  const canSend = user?.role === "admin" || user?.role === "superadmin" || !!user?.permissions?.execution?.includes("edit");
+
+  function loadSummary() {
+    api.get("/api/email/summary").then((r) => setEmailSummary(r.data)).catch(() => setEmailSummary({}));
+  }
 
   function load() {
     setIsLoading(true);
@@ -34,7 +44,7 @@ export function ExecutionPage() {
       .finally(() => setIsLoading(false));
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); loadSummary(); }, []);
 
   async function changeStatus(contractId: string, status: string) {
     setUpdatingId(contractId);
@@ -88,17 +98,18 @@ export function ExecutionPage() {
                   <TableHead>Período</TableHead>
                   <TableHead>Status Atual</TableHead>
                   <TableHead>Alterar Status</TableHead>
-                  <TableHead className="w-12" />
+                  <TableHead>Envio</TableHead>
+                  <TableHead className="w-24" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   [...Array(5)].map((_, i) => (
-                    <TableRow key={i}>{[...Array(8)].map((_, j) => <TableCell key={j}><div className="h-4 animate-pulse rounded bg-muted" /></TableCell>)}</TableRow>
+                    <TableRow key={i}>{[...Array(9)].map((_, j) => <TableCell key={j}><div className="h-4 animate-pulse rounded bg-muted" /></TableCell>)}</TableRow>
                   ))
                 ) : contracts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-32 text-center">
+                    <TableCell colSpan={9} className="h-32 text-center">
                       <Truck className="mx-auto h-8 w-8 text-muted-foreground" />
                       <p className="mt-2 text-muted-foreground">Nenhum contrato encontrado</p>
                     </TableCell>
@@ -106,7 +117,7 @@ export function ExecutionPage() {
                 ) : (
                   contracts.map((c) => (
                     <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.number_contract}</TableCell>
+                      <TableCell className="font-medium"><button type="button" className="text-left underline-offset-2 hover:underline" title="Ver envios" onClick={() => setEmailContract(c)}>{c.number_contract}</button></TableCell>
                       <TableCell>{c.name_product}<br /><span className="text-xs text-muted-foreground">{c.crop}</span></TableCell>
                       <TableCell>{c.quantity} {c.type_quantity}</TableCell>
                       <TableCell>{c.pickup_location}</TableCell>
@@ -130,10 +141,25 @@ export function ExecutionPage() {
                           </SelectContent>
                         </Select>
                       </TableCell>
+                      <TableCell className="text-xs">
+                        <button type="button" className="space-y-0.5 text-left" title="Ver envios" onClick={() => setEmailContract(c)}>
+                          {emailSummary[c.id]?.seller || emailSummary[c.id]?.buyer ? (
+                            <>
+                              <p>Vend.: {emailSummary[c.id]?.seller ? formatDateTime(emailSummary[c.id].seller!) : "—"}</p>
+                              <p>Comp.: {emailSummary[c.id]?.buyer ? formatDateTime(emailSummary[c.id].buyer!) : "—"}</p>
+                            </>
+                          ) : <span className="text-muted-foreground">Não enviado</span>}
+                        </button>
+                      </TableCell>
                       <TableCell>
                         <Button variant="ghost" size="icon" asChild>
                           <Link to={`/contracts/${c.id}`}><Eye className="h-4 w-4" /></Link>
                         </Button>
+                        {canSend && (
+                          <Button variant="ghost" size="icon" title="Enviar contrato por e-mail" onClick={() => setEmailContract(c)}>
+                            <Mail className="h-4 w-4" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
@@ -143,6 +169,12 @@ export function ExecutionPage() {
           </CardContent>
         </Card>
       </div>
+
+      <ContractEmailDialog contract={emailContract} canSend={canSend} onClose={() => setEmailContract(null)} onSent={loadSummary} />
     </div>
   );
+}
+
+function formatDateTime(v: string) {
+  return new Date(v).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 }

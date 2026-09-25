@@ -3,6 +3,7 @@ import sanitizeHtml from "sanitize-html";
 import { AppDataSource } from "../../database/data-source";
 import { Tenant } from "../entities/Tenant";
 import { GrainContract } from "../entities/GrainContract";
+import { ContractEmailLog } from "../entities/ContractEmailLog";
 import { getTenantMailer } from "../../services/tenantMailer";
 import { generateContractPdf, getPdfSettings } from "../../services/contractPdf";
 
@@ -66,38 +67,88 @@ export class EmailController {
 
     const contractHtml = buildContractHtml(contract, tenant);
 
+    const logRepo = AppDataSource.getRepository(ContractEmailLog);
+    const parties = [
+      { party: "seller", role: "Vendedor" as const, emails: sellerEmails, names: contract.seller },
+      { party: "buyer", role: "Comprador" as const, emails: buyerEmails, names: contract.buyer },
+    ].filter((p) => p.emails.length > 0);
+
     const sentTo: string[] = [];
+    const results: { party: string; status: string }[] = [];
 
-    if (sellerEmails.length > 0) {
-      const sellerNames = Array.isArray(contract.seller) ? contract.seller.join(", ") : contract.seller;
-      await transporter.sendMail({
-        from: mailer.from,
-        to: sellerEmails,
-        bcc: bccList,
-        subject: `${subject} - Vendedor`,
-        html: contractHtml("Vendedor", sellerNames, mailer.signature),
-        attachments: [{ filename: `contrato_${safeFile(contract.number_contract)}_vendedor.pdf`, content: await generateContractPdf(contract, tenant, "Vendedor", layout) }],
-      });
-      sentTo.push(...sellerEmails);
+    for (const p of parties) {
+      const names = Array.isArray(p.names) ? p.names.join(", ") : String(p.names || "");
+      const partySubject = `${subject} - ${p.role}`;
+      let status = "sent";
+      let error: string | null = null;
+      try {
+        await transporter.sendMail({
+          from: mailer.from,
+          to: p.emails,
+          bcc: bccList,
+          subject: partySubject,
+          html: contractHtml(p.role, names, mailer.signature),
+          attachments: [{ filename: `contrato_${safeFile(contract.number_contract)}_${p.role.toLowerCase()}.pdf`, content: await generateContractPdf(contract, tenant, p.role, layout) }],
+        });
+        sentTo.push(...p.emails);
+      } catch (e: any) {
+        status = "failed";
+        error = String(e?.message || e).slice(0, 500);
+      }
+      await logRepo.save(
+        logRepo.create({
+          tenant_id,
+          contract_id: contract.id,
+          party: p.party,
+          party_names: names,
+          recipients: p.emails,
+          subject: partySubject,
+          copy_correct: Boolean(copy_correct),
+          status,
+          error,
+          sent_by_id: req.user.id,
+          sent_by_name: req.user.name,
+          sent_by_email: req.user.email,
+        })
+      );
+      results.push({ party: p.party, status });
     }
 
-    if (buyerEmails.length > 0) {
-      const buyerNames = Array.isArray(contract.buyer) ? contract.buyer.join(", ") : contract.buyer;
-      await transporter.sendMail({
-        from: mailer.from,
-        to: buyerEmails,
-        bcc: bccList,
-        subject: `${subject} - Comprador`,
-        html: contractHtml("Comprador", buyerNames, mailer.signature),
-        attachments: [{ filename: `contrato_${safeFile(contract.number_contract)}_comprador.pdf`, content: await generateContractPdf(contract, tenant, "Comprador", layout) }],
-      });
-      sentTo.push(...buyerEmails);
+    const failed = results.filter((r) => r.status === "failed");
+    if (failed.length > 0) {
+      const who = failed.map((f) => (f.party === "seller" ? "vendedor" : "comprador")).join(" e ");
+      return res.status(502).json({ error: `Falha ao enviar o e-mail para o ${who}. Verifique a configuração de e-mail da corretora.`, results, sent_to: sentTo });
     }
 
-    return res.json({
-      message: "E-mails enviados com sucesso!",
-      sent_to: sentTo,
+    return res.json({ message: "E-mails enviados com sucesso!", sent_to: sentTo, results });
+  }
+
+  // Histórico de envios de um contrato (somente da corretora do usuário).
+  async logs(req: Request, res: Response) {
+    const { tenant_id } = req.user;
+    const contract = await AppDataSource.getRepository(GrainContract).findOne({ where: { id: req.params.id, tenant_id }, select: ["id"] });
+    if (!contract) return res.status(404).json({ error: "Contrato não encontrado" });
+    const logs = await AppDataSource.getRepository(ContractEmailLog).find({
+      where: { tenant_id, contract_id: contract.id },
+      order: { sent_at: "DESC" },
     });
+    return res.json(logs);
+  }
+
+  // Último envio bem-sucedido por contrato e lado, para a listagem da Execução.
+  async summary(req: Request, res: Response) {
+    const rows = await AppDataSource.getRepository(ContractEmailLog)
+      .createQueryBuilder("l")
+      .select("l.contract_id", "contract_id")
+      .addSelect("l.party", "party")
+      .addSelect("MAX(l.sent_at)", "last_sent_at")
+      .where("l.tenant_id = :tenant_id AND l.status = 'sent'", { tenant_id: req.user.tenant_id })
+      .groupBy("l.contract_id")
+      .addGroupBy("l.party")
+      .getRawMany();
+    const out: Record<string, { seller?: string; buyer?: string }> = {};
+    for (const r of rows) (out[r.contract_id] ||= {})[r.party as "seller" | "buyer"] = r.last_sent_at;
+    return res.json(out);
   }
 
   async sendCustomEmail(req: Request, res: Response) {

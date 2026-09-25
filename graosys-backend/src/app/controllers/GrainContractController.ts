@@ -3,6 +3,7 @@ import { AppDataSource } from "../../database/data-source";
 import { GrainContract } from "../entities/GrainContract";
 import { ILike } from "typeorm";
 import { pickFields } from "../../utils/pickFields";
+import { nextContractNumber } from "../../utils/contractNumber";
 
 const ALLOWED_FIELDS: (keyof GrainContract)[] = [
   "number_broker", "number_contract", "seller", "buyer", "list_email_seller", "list_email_buyer",
@@ -31,6 +32,46 @@ export class GrainContractController {
     });
     await contractRepo.save(contract);
     return res.status(201).json(contract);
+  }
+
+  // Clona um contrato da própria corretora; o número é o do último contrato da base + 1.
+  async clone(req: Request, res: Response) {
+    const { tenant_id } = req.user;
+    const clone = await AppDataSource.transaction(async (tx) => {
+      const repo = tx.getRepository(GrainContract);
+      // Serializa clonagens do mesmo tenant para não gerar números duplicados.
+      await tx.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`contract-number:${tenant_id}`]);
+
+      const source = await repo.findOne({ where: { id: req.params.id, tenant_id } });
+      if (!source) return null;
+
+      const last = await repo.findOne({ where: { tenant_id }, order: { created_at: "DESC" }, select: ["id", "number_contract"] });
+      let number = nextContractNumber(last?.number_contract);
+      for (let i = 0; i < 100 && (await repo.count({ where: { tenant_id, number_contract: number } })) > 0; i++) {
+        number = nextContractNumber(number);
+      }
+
+      const now = new Date();
+      return repo.save(
+        repo.create({
+          ...pickFields<GrainContract>(source, ALLOWED_FIELDS),
+          tenant_id,
+          number_contract: number,
+          contract_emission_date: now.toISOString().slice(0, 10),
+          number_external_contract_buyer: null,
+          number_external_contract_seller: null,
+          total_received: null,
+          status_received: null,
+          expected_receipt_date: null,
+          status: {
+            status_current: "Ativo",
+            history: [{ date: now.toLocaleDateString("pt-BR"), time: now.toLocaleTimeString("pt-BR"), status: "Ativo", owner_change: req.user.name }],
+          },
+        })
+      );
+    });
+    if (!clone) return res.status(404).json({ error: "Contrato não encontrado" });
+    return res.status(201).json(clone);
   }
 
   async getAll(req: Request, res: Response) {

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/services/api";
+import { ClientPicker } from "@/components/ClientPicker";
 
 interface ContractForm {
   number_broker: string;
@@ -183,7 +184,7 @@ export function ContractFormPage() {
                   <div className="space-y-2">
                     {sellers.fields.map((field, i) => (
                       <div key={field.id} className="flex gap-2">
-                        <Input {...register(`seller.${i}.value`, { required: i === 0 })} placeholder="Nome do vendedor" />
+                        <Controller name={`seller.${i}.value`} control={control} rules={{ required: i === 0 }} render={({ field: f }) => (<ClientPicker value={f.value} onChange={f.onChange} placeholder="Buscar ou digitar o vendedor" />)} />
                         {sellers.fields.length > 1 && (
                           <Button type="button" variant="ghost" size="icon" onClick={() => sellers.remove(i)}>
                             <X className="h-4 w-4" />
@@ -217,7 +218,7 @@ export function ContractFormPage() {
                   <div className="space-y-2">
                     {buyers.fields.map((field, i) => (
                       <div key={field.id} className="flex gap-2">
-                        <Input {...register(`buyer.${i}.value`, { required: i === 0 })} placeholder="Nome do comprador" />
+                        <Controller name={`buyer.${i}.value`} control={control} rules={{ required: i === 0 }} render={({ field: f }) => (<ClientPicker value={f.value} onChange={f.onChange} placeholder="Buscar ou digitar o comprador" />)} />
                         {buyers.fields.length > 1 && (
                           <Button type="button" variant="ghost" size="icon" onClick={() => buyers.remove(i)}>
                             <X className="h-4 w-4" />
