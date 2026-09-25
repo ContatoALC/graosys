@@ -11,9 +11,10 @@ async function run() {
   const contracts = await repo.find();
   let changed = 0;
   for (const c of contracts) {
-    const before = JSON.stringify([c.quantity_kg, c.total_contract_value, c.commission_contract]);
+    const snapshot = () => [c.quantity_kg, c.total_contract_value, c.commission_contract, c.commission_seller_contract_value, c.commission_buyer_contract_value].map((v) => Number(v ?? 0)).join("|");
+    const before = snapshot();
     applyTotals(c);
-    if (JSON.stringify([c.quantity_kg, c.total_contract_value, c.commission_contract]) !== before) { await repo.save(c); changed++; }
+    if (snapshot() !== before) { await repo.save(c); changed++; }
   }
   console.log(`Contratos analisados: ${contracts.length}, atualizados: ${changed}`);
 }
