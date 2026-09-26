@@ -2,6 +2,7 @@ import "reflect-metadata";
 import dotenv from "dotenv";
 import { DataSource } from "typeorm";
 import { entitiesDir } from "../app/entities";
+import { withExplicitSslMode } from "./pgUrl";
 
 dotenv.config({ path: ".env" });
 
@@ -18,7 +19,7 @@ const isLocalHost = ["localhost", "127.0.0.1", "::1"].includes(dbHost);
 // Vercel Postgres / Neon / Supabase expõem uma connection string pronta
 // (DATABASE_URL ou POSTGRES_URL). Se existir, ela tem prioridade sobre as
 // variáveis TYPEORM_* usadas no ambiente local.
-const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+const connectionString = withExplicitSslMode(process.env.DATABASE_URL || process.env.POSTGRES_URL);
 
 export const AppDataSource = new DataSource(
   connectionString

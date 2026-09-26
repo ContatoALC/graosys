@@ -3,11 +3,12 @@ import path from "path";
 import dotenv from "dotenv";
 import { DataSource } from "typeorm";
 import { entitiesDir } from "../app/entities";
+import { withExplicitSslMode } from "./pgUrl";
 
 dotenv.config({ path: ".env" });
 
 // Migrations devem usar conexão direta (não "pooled") do banco: MIGRATION_DATABASE_URL.
-const url = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL;
+const url = withExplicitSslMode(process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL);
 const host = process.env.TYPEORM_HOST || "localhost";
 const isLocal = !url && ["localhost", "127.0.0.1", "::1"].includes(host);
 
