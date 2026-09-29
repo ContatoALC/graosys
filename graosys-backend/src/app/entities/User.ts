@@ -1,8 +1,10 @@
-import { Entity, Column, CreateDateColumn, PrimaryColumn, BeforeUpdate, ManyToOne, JoinColumn } from "typeorm";
+import { Entity, Column, CreateDateColumn, PrimaryColumn, BeforeUpdate, ManyToOne, JoinColumn, Index } from "typeorm";
 import { v4 as uuid } from "uuid";
 import { Tenant } from "./Tenant";
 
 @Entity("users")
+// Índice único em LOWER(email), criado pela migration AccountSecurity (expressão: fora do sync do TypeORM).
+@Index("UQ_users_email_lower", { synchronize: false })
 export class User {
   @PrimaryColumn()
   id: string;
@@ -34,6 +36,12 @@ export class User {
 
   @Column({ type: "timestamp", nullable: true })
   last_login_at: Date | null;
+
+  @Column({ type: "varchar", nullable: true, select: false })
+  reset_token_hash: string | null; // sha256 do token de "esqueci minha senha"
+
+  @Column({ type: "timestamp", nullable: true, select: false })
+  reset_token_expires_at: Date | null;
 
   @CreateDateColumn()
   created_at: Date;

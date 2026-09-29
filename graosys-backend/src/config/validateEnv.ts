@@ -19,6 +19,13 @@ export function validateEnv() {
     console.warn("EMAIL_ENCRYPTION_KEY ausente ou curta (mínimo 32 caracteres): cadastro de SMTP por corretora ficará indisponível.");
   }
 
+  if (!process.env.FRONTEND_URL) {
+    console.warn("FRONTEND_URL ausente: \"Esqueci minha senha\" não envia o link de redefinição (e o CORS aceita qualquer origem).");
+  }
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.warn("SMTP_USER/SMTP_PASS ausentes: e-mails da plataforma (redefinição de senha) e de corretoras sem SMTP próprio não serão enviados.");
+  }
+
   const hasConnectionString = Boolean(process.env.DATABASE_URL || process.env.POSTGRES_URL);
   if (!hasConnectionString) {
     const dbPassword = process.env.TYPEORM_PASSWORD;

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { Wheat, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,7 +16,15 @@ interface LoginForm {
 export function LoginPage() {
   const navigate = useNavigate();
   const { signIn } = useAuth();
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() => {
+    try {
+      const reason = sessionStorage.getItem("@graosys:logout-reason") || "";
+      sessionStorage.removeItem("@graosys:logout-reason");
+      return reason;
+    } catch {
+      return "";
+    }
+  });
   const [isLoading, setIsLoading] = useState(false);
   const { register, handleSubmit } = useForm<LoginForm>();
 
@@ -62,7 +70,10 @@ export function LoginPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Senha</Label>
+                  <Link to="/forgot-password" className="text-xs text-primary hover:underline">Esqueci minha senha</Link>
+                </div>
                 <Input
                   id="password"
                   type="password"

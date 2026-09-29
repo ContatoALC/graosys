@@ -3,21 +3,15 @@ import bcrypt from "bcrypt";
 import { AppDataSource } from "../../database/data-source";
 import { Tenant } from "../entities/Tenant";
 import { User } from "../entities/User";
+import { EMAIL_RE, MIN_PASSWORD, emailInUse, endUserSessions, normalizeEmail } from "../../services/accounts";
 import { PLAN_KEYS as PLANS, PLANS as PLAN_INFO, monthlyPrice } from "../../config/plans";
 
 const STATUSES = ["active", "inactive", "suspended"];
 const ROLES = ["admin", "user"];
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const tenantRepo = () => AppDataSource.getRepository(Tenant);
 const userRepo = () => AppDataSource.getRepository(User);
-
-// O login busca por e-mail sem tenant, então e-mail precisa ser único na plataforma.
-async function emailInUse(email: string, exceptUserId?: string) {
-  const u = await userRepo().findOne({ where: { email } });
-  return Boolean(u && u.id !== exceptUserId);
-}
 
 function toDateOrNull(v: unknown): Date | null | undefined {
   if (v === undefined) return undefined;
@@ -97,7 +91,8 @@ export class PlatformController {
   }
 
   async createTenant(req: Request, res: Response) {
-    const { name, slug, cnpj, email, phone, plan, plan_expires_at, admin_name, admin_email, admin_password } = req.body;
+    const { name, slug, cnpj, email, phone, plan, plan_expires_at, admin_name, admin_password } = req.body;
+    const admin_email = normalizeEmail(req.body.admin_email);
 
     if (!name || !slug || !admin_name || !admin_email || !admin_password) {
       return res.status(400).json({ error: "Nome, identificador e dados do administrador são obrigatórios" });
@@ -106,7 +101,7 @@ export class PlatformController {
       return res.status(400).json({ error: "Identificador deve ter 3-50 caracteres: letras minúsculas, números e hífen" });
     }
     if (!EMAIL_RE.test(admin_email)) return res.status(400).json({ error: "E-mail do administrador inválido" });
-    if (String(admin_password).length < 8) return res.status(400).json({ error: "Senha deve ter no mínimo 8 caracteres" });
+    if (String(admin_password).length < MIN_PASSWORD) return res.status(400).json({ error: "Senha deve ter no mínimo 8 caracteres" });
     if (plan && !PLANS.includes(plan)) return res.status(400).json({ error: "Plano inválido" });
     const expires = toDateOrNull(plan_expires_at);
     if (plan_expires_at && expires === undefined) return res.status(400).json({ error: "Data de vencimento inválida" });
@@ -161,11 +156,12 @@ export class PlatformController {
   async createUser(req: Request, res: Response) {
     const tenant = await tenantRepo().findOne({ where: { id: req.params.id } });
     if (!tenant) return res.status(404).json({ error: "Corretora não encontrada" });
-    const { name, email, password, role } = req.body;
+    const { name, password, role } = req.body;
+    const email = normalizeEmail(req.body.email);
 
     if (!name || !email || !password) return res.status(400).json({ error: "Nome, e-mail e senha são obrigatórios" });
     if (!EMAIL_RE.test(email)) return res.status(400).json({ error: "E-mail inválido" });
-    if (String(password).length < 8) return res.status(400).json({ error: "Senha deve ter no mínimo 8 caracteres" });
+    if (String(password).length < MIN_PASSWORD) return res.status(400).json({ error: "Senha deve ter no mínimo 8 caracteres" });
     if (role !== undefined && !ROLES.includes(role)) return res.status(400).json({ error: "Perfil inválido" });
     if (await emailInUse(email)) return res.status(400).json({ error: "Este e-mail já está em uso" });
 
@@ -190,14 +186,16 @@ export class PlatformController {
 
     if (role !== undefined && !ROLES.includes(role)) return res.status(400).json({ error: "Perfil inválido" });
     if (email !== undefined) {
-      if (!EMAIL_RE.test(email)) return res.status(400).json({ error: "E-mail inválido" });
-      if (await emailInUse(email, user.id)) return res.status(400).json({ error: "Este e-mail já está em uso" });
-      user.email = email;
+      const normalized = normalizeEmail(email);
+      if (!EMAIL_RE.test(normalized)) return res.status(400).json({ error: "E-mail inválido" });
+      if (await emailInUse(normalized, user.id)) return res.status(400).json({ error: "Este e-mail já está em uso" });
+      user.email = normalized;
     }
     if (name !== undefined) user.name = name;
     if (role !== undefined) user.role = role;
     if (active !== undefined) user.active = Boolean(active);
     await userRepo().save(user);
+    if (!user.active) await endUserSessions(user.id, "user_deactivated");
     const { password: _, ...data } = user;
     return res.json(data);
   };
@@ -206,9 +204,10 @@ export class PlatformController {
     const user = await this.findManageableUser(req, res);
     if (!user) return;
     const { new_password } = req.body;
-    if (!new_password || String(new_password).length < 8) return res.status(400).json({ error: "Senha deve ter no mínimo 8 caracteres" });
+    if (!new_password || String(new_password).length < MIN_PASSWORD) return res.status(400).json({ error: "Senha deve ter no mínimo 8 caracteres" });
     user.password = await bcrypt.hash(new_password, 10);
     await userRepo().save(user);
+    await endUserSessions(user.id, "password_reset");
     return res.json({ message: "Senha redefinida com sucesso" });
   };
 }

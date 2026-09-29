@@ -4,6 +4,8 @@ import { v4 as uuid } from "uuid";
 // Trilha de auditoria: somente inserção (não há rota de edição ou exclusão).
 @Entity("audit_logs")
 @Index(["tenant_id", "created_at"])
+// Limite de tentativas de login e de pedidos de redefinição de senha (migration AccountSecurity).
+@Index("IDX_audit_logs_action_created", { synchronize: false })
 export class AuditLog {
   @PrimaryColumn()
   id: string;

@@ -41,7 +41,8 @@ const lookup = new LookupController();
 
 // Público
 router.post("/api/auth/login", session.login);
-router.post("/api/tenants/register", tenant.register); // Cadastro de nova corretora
+router.post("/api/auth/forgot-password", session.forgotPassword);
+router.post("/api/auth/reset-password-token", session.resetPasswordWithToken);
 
 // Protegido (requer JWT)
 router.use(authMiddleware);

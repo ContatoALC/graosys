@@ -98,7 +98,10 @@ export function AdminUsersPage() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2"><Label>Nome</Label><Input {...register("name", { required: true })} /></div>
             <div className="space-y-2"><Label>E-mail</Label><Input type="email" {...register("email", { required: true })} /></div>
-            {!editingId && <div className="space-y-2"><Label>Senha</Label><Input type="password" {...register("password", { required: !editingId })} /></div>}
+            <div className="space-y-2">
+              <Label>{editingId ? "Nova senha" : "Senha"}</Label>
+              <Input type="password" autoComplete="new-password" placeholder={editingId ? "Deixe em branco para manter a atual" : "Mínimo de 8 caracteres"} {...register("password", { required: !editingId })} />
+            </div>
             <div className="space-y-2">
               <Label>Perfil</Label>
               <Controller name="role" control={control} render={({ field }) => (
