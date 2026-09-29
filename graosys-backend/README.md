@@ -55,6 +55,6 @@ apenas em desenvolvimento local; em produção o esquema só muda por migration.
 | `npm run migration:create --name=NomeDaMudanca` | Cria uma migration vazia |
 | `npm run migration:drift` | Mostra diferenças entre as entidades e o banco migrado |
 
-- No deploy de **produção** na Vercel, o script `vercel-build` roda `migration:run` antes de publicar. Se falhar, o build falha e a versão anterior continua no ar. Previews não migram nada.
+- No deploy de **produção** na Vercel, o script `build` roda `migration:run` (via `scripts/migrate-on-deploy.js`) antes de publicar. Se falhar, o build falha e a versão anterior continua no ar. Previews não migram nada.
 - Escreva migrations **idempotentes** (`IF NOT EXISTS`) e **compatíveis com o código anterior**: adicione colunas com default ou nulas primeiro e só remova em um deploy posterior.
 - O CI (`.github/workflows/backend-ci.yml`) roda as migrations em um banco vazio, roda de novo para provar a idempotência e falha se as entidades divergirem das migrations.

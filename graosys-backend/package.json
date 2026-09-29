@@ -7,7 +7,7 @@
     "name": "André Camargo"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "node scripts/migrate-on-deploy.js && tsc",
     "start": "node build/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "seed:leads": "ts-node --transpile-only src/database/seed-leads.ts",
@@ -18,7 +18,6 @@
     "migration:revert": "npm run typeorm -- -d ./src/database/migration-data-source.ts migration:revert",
     "migration:show": "npm run typeorm -- -d ./src/database/migration-data-source.ts migration:show",
     "migration:drift": "npm run typeorm -- -d ./src/database/migration-data-source.ts schema:log",
-    "vercel-build": "node scripts/migrate-on-deploy.js",
     "recompute:totals": "ts-node --transpile-only src/database/recompute-totals.ts"
   },
   "dependencies": {
