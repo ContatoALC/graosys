@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,15 +40,65 @@ export function ClientFormPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm<ClientForm>({
+  const [lookingUp, setLookingUp] = useState<"cnpj" | "cep" | null>(null);
+  const [lookupMsg, setLookupMsg] = useState<{ field: "cnpj" | "cep"; text: string; warn?: boolean } | null>(null);
+  const lastCep = useRef("");
+
+  const { register, handleSubmit, reset, control, setValue, getValues, formState: { errors } } = useForm<ClientForm>({
     defaultValues: { kind: "PJ", situation: "active", country: "Brasil", country_code: "BR" },
   });
 
   useEffect(() => {
     if (isEditing) {
-      api.get(`/api/clients/${id}`).then((r) => reset(r.data)).catch(console.error);
+      api.get(`/api/clients/${id}`).then((r) => {
+        reset(r.data);
+        lastCep.current = digitsOf(r.data.zip_code);
+      }).catch(console.error);
     }
   }, [id]);
+
+  // CNPJ: preenche só os campos ainda vazios, para não sobrescrever o que o usuário já digitou.
+  async function lookupCnpj() {
+    const cnpj = digitsOf(getValues("cnpj_cpf"));
+    if (getValues("kind") !== "PJ" || cnpj.length !== 14) return;
+    setLookingUp("cnpj");
+    setLookupMsg(null);
+    try {
+      const { data } = await api.get(`/api/lookup/cnpj/${cnpj}`);
+      for (const field of ["name", "nickname", "address", "number", "complement", "district", "city", "state", "zip_code", "telephone"] as const) {
+        if (data[field] && !getValues(field)) setValue(field, data[field], { shouldDirty: true });
+      }
+      if (data.zip_code) lastCep.current = digitsOf(data.zip_code);
+      if (data.registration_status && data.registration_status !== "ATIVA") {
+        setLookupMsg({ field: "cnpj", text: `Situação na Receita: ${data.registration_status}`, warn: true });
+      } else {
+        setLookupMsg({ field: "cnpj", text: "Dados preenchidos a partir da Receita Federal" });
+      }
+    } catch (e: any) {
+      setLookupMsg({ field: "cnpj", text: e.response?.data?.error || "Não foi possível consultar o CNPJ", warn: true });
+    } finally {
+      setLookingUp(null);
+    }
+  }
+
+  // CEP: ao trocar o CEP, o endereço passa a ser o do novo CEP.
+  async function lookupCep() {
+    const cep = digitsOf(getValues("zip_code"));
+    if (getValues("country_code") !== "BR" || cep.length !== 8 || cep === lastCep.current) return;
+    setLookingUp("cep");
+    setLookupMsg(null);
+    try {
+      const { data } = await api.get(`/api/lookup/cep/${cep}`);
+      lastCep.current = cep;
+      for (const field of ["address", "district", "city", "state", "zip_code"] as const) {
+        if (data[field]) setValue(field, data[field], { shouldDirty: true });
+      }
+    } catch (e: any) {
+      setLookupMsg({ field: "cep", text: e.response?.data?.error || "Não foi possível consultar o CEP", warn: true });
+    } finally {
+      setLookingUp(null);
+    }
+  }
 
   async function onSubmit(data: ClientForm) {
     setIsSaving(true);
@@ -124,7 +174,11 @@ export function ClientFormPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>CPF / CNPJ *</Label>
-                  <Input {...register("cnpj_cpf", { required: true })} placeholder="000.000.000-00" className={errors.cnpj_cpf ? "border-destructive" : ""} />
+                  <div className="relative">
+                    <Input {...register("cnpj_cpf", { required: true, onBlur: lookupCnpj })} placeholder="000.000.000-00" className={errors.cnpj_cpf ? "border-destructive" : ""} />
+                    {lookingUp === "cnpj" && <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />}
+                  </div>
+                  <LookupHint msg={lookupMsg} field="cnpj" />
                 </div>
               </div>
 
@@ -181,7 +235,11 @@ export function ClientFormPage() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-1 space-y-2">
                   <Label>CEP</Label>
-                  <Input {...register("zip_code")} placeholder="00000-000" />
+                  <div className="relative">
+                    <Input {...register("zip_code", { onBlur: lookupCep })} placeholder="00000-000" />
+                    {lookingUp === "cep" && <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />}
+                  </div>
+                  <LookupHint msg={lookupMsg} field="cep" />
                 </div>
                 <div className="col-span-1 space-y-2">
                   <Label>Cidade</Label>
@@ -231,5 +289,16 @@ export function ClientFormPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+const digitsOf = (v?: string | null) => (v || "").replace(/\D/g, "");
+
+function LookupHint({ msg, field }: { msg: { field: string; text: string; warn?: boolean } | null; field: string }) {
+  if (!msg || msg.field !== field) return null;
+  return (
+    <p className={`flex items-center gap-1 text-xs ${msg.warn ? "text-amber-600" : "text-muted-foreground"}`}>
+      {msg.warn && <AlertTriangle className="h-3 w-3" />}{msg.text}
+    </p>
   );
 }

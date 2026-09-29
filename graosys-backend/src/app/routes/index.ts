@@ -17,6 +17,7 @@ import { auditMiddleware } from "../middlewares/auditMiddleware";
 import { LeadController } from "../controllers/LeadController";
 import { PlatformController } from "../controllers/PlatformController";
 import { EmailController } from "../controllers/EmailController";
+import { LookupController } from "../controllers/LookupController";
 
 const router = Router();
 const session = new SessionController();
@@ -36,6 +37,7 @@ const fixation = new FixationController();
 const pdfSettings = new PdfSettingsController();
 const emailSettings = new EmailSettingsController();
 const broker = new BrokerController();
+const lookup = new LookupController();
 
 // Público
 router.post("/api/auth/login", session.login);
@@ -73,6 +75,10 @@ router.get("/api/clients/cnpj/:cnpj_cpf", requirePermission("clients", "view"), 
 router.post("/api/clients", requirePermission("clients", "create"), client.create);
 router.patch("/api/clients/:id", requirePermission("clients", "edit"), client.update);
 router.delete("/api/clients/:id", requireRole("admin"), client.delete);
+
+// Consulta de CNPJ e CEP (autopreenchimento do cadastro)
+router.get("/api/lookup/cnpj/:cnpj", requirePermission("clients", "view"), lookup.cnpj);
+router.get("/api/lookup/cep/:cep", requirePermission("clients", "view"), lookup.cep);
 
 // Contratos de grãos
 router.get("/api/contracts/report", requirePermission("reports", "view"), contract.getReport);
