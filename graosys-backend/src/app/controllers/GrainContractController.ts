@@ -6,6 +6,7 @@ import { pickFields } from "../../utils/pickFields";
 import { nextContractNumber } from "../../utils/contractNumber";
 import { applyTotals } from "../../services/contractTotals";
 import { ContractFixation } from "../entities/ContractFixation";
+import { withBillingStatus } from "../../services/billingStatus";
 
 const ALLOWED_FIELDS: (keyof GrainContract)[] = [
   "number_broker", "number_contract", "seller", "buyer", "list_email_seller", "list_email_buyer",
@@ -128,14 +129,16 @@ export class GrainContractController {
       take: Number(limit),
     });
 
-    return res.json({ data: contracts, total, page: Number(page), limit: Number(limit) });
+    const data = await withBillingStatus(req.user.tenant_id, contracts);
+    return res.json({ data, total, page: Number(page), limit: Number(limit) });
   }
 
   async getById(req: Request, res: Response) {
     const contractRepo = AppDataSource.getRepository(GrainContract);
     const contract = await contractRepo.findOne({ where: { id: req.params.id, tenant_id: req.user.tenant_id } });
     if (!contract) return res.status(404).json({ error: "Contrato não encontrado" });
-    return res.json(contract);
+    const [withStatus] = await withBillingStatus(req.user.tenant_id, [contract]);
+    return res.json(withStatus);
   }
 
   async update(req: Request, res: Response) {
@@ -182,7 +185,8 @@ export class GrainContractController {
     };
 
     await contractRepo.save(contract);
-    return res.json(contract);
+    const [withStatus] = await withBillingStatus(req.user.tenant_id, [contract]);
+    return res.json(withStatus);
   }
 
   async delete(req: Request, res: Response) {

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Truck, Eye, Search, RefreshCw, Mail, Scale } from "lucide-react";
 import { ContractFixationsDialog } from "@/components/ContractFixationsDialog";
+import { BillingStatusBadge } from "@/components/BillingStatusBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { ContractEmailDialog } from "./ContractEmailDialog";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -95,6 +96,7 @@ export function ExecutionPage() {
                 <TableRow>
                   <TableHead>Status Atual</TableHead>
                   <TableHead>Alterar Status</TableHead>
+                  <TableHead>Cobrança</TableHead>
                   <TableHead>Nº Contrato</TableHead>
                   <TableHead>Produto / Safra</TableHead>
                   <TableHead>Quantidade</TableHead>
@@ -107,11 +109,11 @@ export function ExecutionPage() {
               <TableBody>
                 {isLoading ? (
                   [...Array(5)].map((_, i) => (
-                    <TableRow key={i}>{[...Array(9)].map((_, j) => <TableCell key={j}><div className="h-4 animate-pulse rounded bg-muted" /></TableCell>)}</TableRow>
+                    <TableRow key={i}>{[...Array(10)].map((_, j) => <TableCell key={j}><div className="h-4 animate-pulse rounded bg-muted" /></TableCell>)}</TableRow>
                   ))
                 ) : contracts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-32 text-center">
+                    <TableCell colSpan={10} className="h-32 text-center">
                       <Truck className="mx-auto h-8 w-8 text-muted-foreground" />
                       <p className="mt-2 text-muted-foreground">Nenhum contrato encontrado</p>
                     </TableCell>
@@ -138,6 +140,7 @@ export function ExecutionPage() {
                           </SelectContent>
                         </Select>
                       </TableCell>
+                      <TableCell><BillingStatusBadge status={c.billing_status} /></TableCell>
                       <TableCell className="font-medium"><button type="button" className="text-left underline-offset-2 hover:underline" title="Ver envios" onClick={() => setEmailContract(c)}>{c.number_contract}</button></TableCell>
                       <TableCell>{c.name_product}<br /><span className="text-xs text-muted-foreground">{c.crop}</span></TableCell>
                       <TableCell>

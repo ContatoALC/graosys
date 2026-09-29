@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Plus, Search, FileText, Eye, Copy, Scale } from "lucide-react";
 import { ContractFixationsDialog } from "@/components/ContractFixationsDialog";
+import { BillingStatusBadge } from "@/components/BillingStatusBadge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,6 +84,7 @@ export function ContractsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Status</TableHead>
+                  <TableHead>Cobrança</TableHead>
                   <TableHead>Nº Contrato</TableHead>
                   <TableHead>Produto</TableHead>
                   <TableHead>Safra</TableHead>
@@ -97,14 +99,14 @@ export function ContractsPage() {
                 {isLoading ? (
                   [...Array(5)].map((_, i) => (
                     <TableRow key={i}>
-                      {[...Array(9)].map((_, j) => (
+                      {[...Array(10)].map((_, j) => (
                         <TableCell key={j}><div className="h-4 animate-pulse rounded bg-muted" /></TableCell>
                       ))}
                     </TableRow>
                   ))
                 ) : contracts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-32 text-center">
+                    <TableCell colSpan={10} className="h-32 text-center">
                       <div className="flex flex-col items-center gap-2">
                         <FileText className="h-8 w-8 text-muted-foreground" />
                         <p className="text-muted-foreground">Nenhum contrato encontrado</p>
@@ -119,6 +121,7 @@ export function ContractsPage() {
                           {c.status?.status_current ?? "—"}
                         </Badge>
                       </TableCell>
+                      <TableCell><BillingStatusBadge status={c.billing_status} /></TableCell>
                       <TableCell className="font-medium">
                         {c.number_contract}
                         {c.price_type === "to_fix" && (
