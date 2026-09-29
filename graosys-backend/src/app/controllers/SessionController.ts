@@ -121,9 +121,14 @@ export class SessionController {
       { expiresIn: "8h" }
     );
 
+    const [broker] = await AppDataSource.query(
+      `SELECT id FROM brokers WHERE tenant_id = $1 AND user_id = $2 AND active = true LIMIT 1`, [user.tenant_id, user.id]
+    );
+
     return res.json({
       token,
       user: {
+        broker_id: broker?.id ?? null,
         id: user.id,
         name: user.name,
         email: user.email,

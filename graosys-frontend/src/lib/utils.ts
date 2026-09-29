@@ -11,6 +11,9 @@ export function formatCurrency(value: number, currency = "BRL") {
 
 export function formatDate(date: string | Date) {
   if (!date) return "-";
+  // "AAAA-MM-DD" é data de calendário: new Date() a leria como meia-noite UTC e mostraria o dia anterior no Brasil.
+  const ymd = typeof date === "string" && /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (ymd) return `${ymd[3]}/${ymd[2]}/${ymd[1]}`;
   return new Intl.DateTimeFormat("pt-BR").format(new Date(date));
 }
 

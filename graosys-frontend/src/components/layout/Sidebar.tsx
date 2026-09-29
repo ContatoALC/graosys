@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   Building2,
   Gauge,
+  HandCoins,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -29,6 +30,8 @@ const navItems = [
 ];
 
 const managementItem = { label: "Gerência", icon: Gauge, path: "/management" };
+
+const brokerItem = { label: "Minhas Comissões", icon: HandCoins, path: "/broker-commissions" };
 
 const platformItem = { label: "Painel de Controle", icon: Building2, path: "/platform" };
 
@@ -72,7 +75,7 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 space-y-1 overflow-y-auto p-2 pt-4">
-        {(canSeeManagement ? [...navItems, managementItem] : navItems).map((item) => {
+        {[...navItems, ...(canSeeManagement ? [managementItem] : []), ...(isAdmin || user?.broker_id ? [{ ...brokerItem, label: isAdmin ? "Comissões Brokers" : brokerItem.label }] : [])].map((item) => {
           const active = pathname.startsWith(item.path);
           return (
             <Link

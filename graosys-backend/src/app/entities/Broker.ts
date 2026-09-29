@@ -24,6 +24,9 @@ export class Broker {
   @Column({ default: true })
   active: boolean;
 
+  @Column({ type: "varchar", nullable: true })
+  user_id: string | null; // usuário que faz login como este broker ("Minhas Comissões")
+
   @CreateDateColumn()
   created_at: Date;
 

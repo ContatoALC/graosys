@@ -30,6 +30,7 @@ import { PlatformLeadsPage } from "@/pages/Platform/Leads";
 import { PlatformLeadDetailPage } from "@/pages/Platform/Leads/LeadDetail";
 import { PlatformTenantDetailPage } from "@/pages/Platform/TenantDetail";
 import { MyAccountPage } from "@/pages/MyAccount";
+import { BrokerCommissionsPage } from "@/pages/BrokerCommissions";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -96,6 +97,7 @@ export function AppRoutes() {
         <Route path="platform/leads/:id" element={<SuperadminRoute><PlatformLeadDetailPage /></SuperadminRoute>} />
         <Route path="platform/tenants/:id" element={<SuperadminRoute><PlatformTenantDetailPage /></SuperadminRoute>} />
         <Route path="my-account" element={<MyAccountPage />} />
+        <Route path="broker-commissions" element={<BrokerCommissionsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

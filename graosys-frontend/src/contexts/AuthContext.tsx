@@ -9,6 +9,7 @@ interface AuthUser {
   tenant_id: string;
   tenant_name: string;
   permissions: Record<string, string[]>;
+  broker_id?: string | null; // usuário vinculado a um broker: vê "Minhas Comissões"
 }
 
 interface AuthContextData {

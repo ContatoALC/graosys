@@ -7,6 +7,8 @@ import { nextContractNumber } from "../../utils/contractNumber";
 import { applyTotals } from "../../services/contractTotals";
 import { ContractFixation } from "../entities/ContractFixation";
 import { withBillingStatus } from "../../services/billingStatus";
+import { loadContractBrokers, saveContractBrokers, validateContractBrokers } from "../../services/contractBrokers";
+import { ContractBroker } from "../entities/ContractBroker";
 
 const ALLOWED_FIELDS: (keyof GrainContract)[] = [
   "number_broker", "number_contract", "seller", "buyer", "list_email_seller", "list_email_buyer",
@@ -56,6 +58,8 @@ export class GrainContractController {
     const input = pickFields<GrainContract>(req.body, ALLOWED_FIELDS);
     const pricingError = validatePricing(input);
     if (pricingError) return res.status(400).json({ error: pricingError });
+    const brokersError = await validateContractBrokers(req.user.tenant_id, req.body.brokers, input.contract_emission_date);
+    if (brokersError) return res.status(400).json({ error: brokersError });
     const contract = contractRepo.create({
       ...input,
       tenant_id: req.user.tenant_id,
@@ -67,7 +71,10 @@ export class GrainContractController {
     normalizePricing(contract);
     contract.fixed_quantity = 0;
     applyTotals(contract);
-    await contractRepo.save(contract);
+    await AppDataSource.transaction(async (tx) => {
+      await tx.getRepository(GrainContract).save(contract);
+      if (Array.isArray(req.body.brokers)) await saveContractBrokers(tx, req.user.tenant_id, contract.id, req.body.brokers);
+    });
     return res.status(201).json(contract);
   }
 
@@ -107,7 +114,10 @@ export class GrainContractController {
           },
         });
       applyTotals(draft);
-      return repo.save(draft);
+      const saved = await repo.save(draft);
+      const brokers = await tx.getRepository(ContractBroker).find({ where: { tenant_id, contract_id: source.id } });
+      await saveContractBrokers(tx, tenant_id, saved.id, brokers.map((b) => ({ broker_id: b.broker_id, commission_percent: b.commission_percent })));
+      return saved;
     });
     if (!clone) return res.status(404).json({ error: "Contrato não encontrado" });
     return res.status(201).json(clone);
@@ -138,7 +148,7 @@ export class GrainContractController {
     const contract = await contractRepo.findOne({ where: { id: req.params.id, tenant_id: req.user.tenant_id } });
     if (!contract) return res.status(404).json({ error: "Contrato não encontrado" });
     const [withStatus] = await withBillingStatus(req.user.tenant_id, [contract]);
-    return res.json(withStatus);
+    return res.json({ ...withStatus, brokers: await loadContractBrokers(req.user.tenant_id, contract.id, contract.contract_emission_date) });
   }
 
   async update(req: Request, res: Response) {
@@ -148,6 +158,8 @@ export class GrainContractController {
     const input = pickFields<GrainContract>(req.body, ALLOWED_FIELDS);
     const pricingError = validatePricing({ ...contract, ...input });
     if (pricingError) return res.status(400).json({ error: pricingError });
+    const brokersError = await validateContractBrokers(req.user.tenant_id, req.body.brokers, input.contract_emission_date ?? contract.contract_emission_date);
+    if (brokersError) return res.status(400).json({ error: brokersError });
 
     // Com fixações lançadas, o modo de preço e a quantidade não podem contradizê-las.
     const fixationCount = await AppDataSource.getRepository(ContractFixation).count({ where: { contract_id: contract.id, tenant_id: req.user.tenant_id } });
@@ -161,7 +173,10 @@ export class GrainContractController {
     Object.assign(contract, input);
     normalizePricing(contract);
     applyTotals(contract);
-    await contractRepo.save(contract);
+    await AppDataSource.transaction(async (tx) => {
+      await tx.getRepository(GrainContract).save(contract);
+      if (Array.isArray(req.body.brokers)) await saveContractBrokers(tx, req.user.tenant_id, contract.id, req.body.brokers);
+    });
     return res.json(contract);
   }
 
@@ -193,7 +208,11 @@ export class GrainContractController {
     const contractRepo = AppDataSource.getRepository(GrainContract);
     const contract = await contractRepo.findOne({ where: { id: req.params.id, tenant_id: req.user.tenant_id } });
     if (!contract) return res.status(404).json({ error: "Contrato não encontrado" });
-    await contractRepo.remove(contract);
+    const contractId = contract.id;
+    await AppDataSource.transaction(async (tx) => {
+      await tx.getRepository(ContractBroker).delete({ tenant_id: req.user.tenant_id, contract_id: contractId });
+      await tx.getRepository(GrainContract).remove(contract);
+    });
     return res.status(204).send();
   }
 

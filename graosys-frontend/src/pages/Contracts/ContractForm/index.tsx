@@ -56,7 +56,11 @@ interface ContractForm {
   number_external_contract_buyer: string;
   observation: string;
   internal_communication: string;
+  brokers: { broker_id: string; commission_percent: string }[];
 }
+
+const selectClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const pctLabel = (v: number | null | undefined) => (v === null || v === undefined ? "sem tabela" : `${v.toLocaleString("pt-BR", { maximumFractionDigits: 4 })}%`);
 
 export function ContractFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -65,6 +69,7 @@ export function ContractFormPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [products, setProducts] = useState<any[]>([]);
+  const [brokerList, setBrokerList] = useState<any[]>([]);
   const [saved, setSaved] = useState<any | null>(null);
 
   const { register, handleSubmit, reset, control, setValue, watch, formState: { errors } } = useForm<ContractForm>({
@@ -77,6 +82,7 @@ export function ContractFormPage() {
       buyer: [{ value: "" }],
       list_email_seller: [],
       list_email_buyer: [],
+      brokers: [],
     },
   });
 
@@ -84,9 +90,11 @@ export function ContractFormPage() {
   const buyers = useFieldArray({ control, name: "buyer" });
   const emailsSeller = useFieldArray({ control, name: "list_email_seller" });
   const emailsBuyer = useFieldArray({ control, name: "list_email_buyer" });
+  const contractBrokers = useFieldArray({ control, name: "brokers" });
 
   useEffect(() => {
     api.get("/api/products").then((r) => setProducts(r.data)).catch(console.error);
+    api.get("/api/brokers").then((r) => setBrokerList(r.data)).catch(console.error);
     if (isEditing) {
       api.get(`/api/contracts/${id}`).then((r) => {
         const d = r.data;
@@ -96,6 +104,7 @@ export function ContractFormPage() {
           buyer: (d.buyer || []).map((v: string) => ({ value: v })),
           list_email_seller: (d.list_email_seller || []).map((v: string) => ({ value: v })),
           list_email_buyer: (d.list_email_buyer || []).map((v: string) => ({ value: v })),
+          brokers: (d.brokers || []).map((b: any) => ({ broker_id: b.broker_id, commission_percent: b.commission_percent === null ? "" : String(b.commission_percent) })),
           quantity: String(d.quantity ?? ""),
           price: String(d.price ?? ""),
           price_type: d.price_type ?? "fixed",
@@ -135,6 +144,9 @@ export function ContractFormPage() {
         list_email_seller: data.list_email_seller.map((e) => e.value).filter(Boolean),
         list_email_buyer: data.list_email_buyer.map((e) => e.value).filter(Boolean),
         quantity: Number(data.quantity),
+        brokers: data.brokers.filter((b) => b.broker_id).map((b) => ({
+          broker_id: b.broker_id, commission_percent: b.commission_percent === "" ? null : Number(b.commission_percent),
+        })),
       } as any;
       const toFix = data.price_type === "to_fix";
       const frame = toFix && data.fixation_mode === "frame";
@@ -198,6 +210,34 @@ export function ContractFormPage() {
                   <Input {...register("owner_contract")} />
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Brokers */}
+          <Card>
+            <CardHeader><CardTitle className="text-base">Brokers</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {contractBrokers.fields.length === 0 && <p className="text-sm text-muted-foreground">Nenhum broker neste contrato.</p>}
+              {contractBrokers.fields.map((field, i) => {
+                const chosen = brokerList.find((b) => b.id === watch(`brokers.${i}.broker_id`));
+                const tablePct = saved?.brokers?.find((b: any) => b.broker_id === chosen?.id)?.table_percent ?? chosen?.current_percent;
+                return (
+                  <div key={field.id} className="grid grid-cols-[1fr_180px_auto] items-start gap-2">
+                    <select key={brokerList.length} className={selectClass} {...register(`brokers.${i}.broker_id`, { required: true })}>
+                      <option value="">Selecione o broker</option>
+                      {brokerList.filter((b) => b.active || b.id === chosen?.id).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                    </select>
+                    <div>
+                      <Input type="number" step="0.0001" min="0" max="100" placeholder={chosen ? `Tabela: ${pctLabel(tablePct)}` : "% da comissão"} {...register(`brokers.${i}.commission_percent`)} />
+                    </div>
+                    <Button type="button" variant="ghost" size="icon" onClick={() => contractBrokers.remove(i)}><X className="h-4 w-4" /></Button>
+                  </div>
+                );
+              })}
+              <Button type="button" variant="outline" size="sm" onClick={() => contractBrokers.append({ broker_id: "", commission_percent: "" })}>
+                <Plus className="mr-1 h-3 w-3" />Adicionar broker
+              </Button>
+              <p className="text-xs text-muted-foreground">% sobre a comissão da corretora neste contrato. Em branco, vale a tabela de comissão do broker na data de emissão.</p>
             </CardContent>
           </Card>
 

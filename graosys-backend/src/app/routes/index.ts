@@ -18,6 +18,7 @@ import { LeadController } from "../controllers/LeadController";
 import { PlatformController } from "../controllers/PlatformController";
 import { EmailController } from "../controllers/EmailController";
 import { LookupController } from "../controllers/LookupController";
+import { BrokerPortalController } from "../controllers/BrokerPortalController";
 
 const router = Router();
 const session = new SessionController();
@@ -38,6 +39,7 @@ const pdfSettings = new PdfSettingsController();
 const emailSettings = new EmailSettingsController();
 const broker = new BrokerController();
 const lookup = new LookupController();
+const brokerPortal = new BrokerPortalController();
 
 // Público
 router.post("/api/auth/login", session.login);
@@ -111,12 +113,19 @@ router.post("/api/products", requireRole("admin"), product.create);
 router.patch("/api/products/:id", requireRole("admin"), product.update);
 router.delete("/api/products/:id", requireRole("admin"), product.delete);
 
+// Minhas Comissões (broker vê só as próprias; admin escolhe o broker) e produtividade de todos (admin)
+router.get("/api/broker-portal/summary", brokerPortal.summary);
+router.get("/api/broker-portal/ranking", requireRole("admin"), brokerPortal.ranking);
+
 // Brokers (Admin)
 router.get("/api/brokers", broker.getAll);
 router.get("/api/brokers/:id", broker.getById);
 router.post("/api/brokers", requireRole("admin"), broker.create);
 router.patch("/api/brokers/:id", requireRole("admin"), broker.update);
 router.delete("/api/brokers/:id", requireRole("admin"), broker.delete);
+router.get("/api/brokers/:id/rates", requireRole("admin"), broker.listRates);
+router.post("/api/brokers/:id/rates", requireRole("admin"), broker.addRate);
+router.delete("/api/brokers/:id/rates/:rateId", requireRole("admin"), broker.deleteRate);
 
 // Auditoria e sessões da corretora (Admin)
 router.get("/api/audit", requireRole("admin"), audit.list);
