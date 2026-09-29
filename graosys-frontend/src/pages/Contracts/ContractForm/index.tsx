@@ -285,7 +285,8 @@ export function ContractFormPage() {
                 <div className="space-y-2">
                   <Label>Produto *</Label>
                   <Controller name="product" control={control} rules={{ required: true }} render={({ field }) => (
-                    <Select value={field.value} onValueChange={(v) => { field.onChange(v); handleProductChange(v); }}>
+                    // key: remonta quando a lista chega; sem isso o valor carregado antes dos produtos fica sem rótulo.
+                    <Select key={products.length} value={field.value} onValueChange={(v) => { field.onChange(v); handleProductChange(v); }}>
                       <SelectTrigger className={errors.product ? "border-destructive" : ""}><SelectValue placeholder="Selecione o produto" /></SelectTrigger>
                       <SelectContent>
                         {products.map((p) => (
