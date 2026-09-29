@@ -82,13 +82,13 @@ export function ContractsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Status</TableHead>
                   <TableHead>Nº Contrato</TableHead>
                   <TableHead>Produto</TableHead>
                   <TableHead>Safra</TableHead>
                   <TableHead>Vendedor</TableHead>
                   <TableHead>Comprador</TableHead>
                   <TableHead className="text-right">Valor Total</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead>Data</TableHead>
                   <TableHead className="w-12" />
                 </TableRow>
@@ -114,6 +114,11 @@ export function ContractsPage() {
                 ) : (
                   contracts.map((c) => (
                     <TableRow key={c.id}>
+                      <TableCell>
+                        <Badge variant={statusVariant[c.status?.status_current] ?? "outline"}>
+                          {c.status?.status_current ?? "—"}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="font-medium">
                         {c.number_contract}
                         {c.price_type === "to_fix" && (
@@ -127,11 +132,6 @@ export function ContractsPage() {
                       <TableCell className="text-xs">{Array.isArray(c.seller) ? c.seller.join(", ") : c.seller}</TableCell>
                       <TableCell className="text-xs">{Array.isArray(c.buyer) ? c.buyer.join(", ") : c.buyer}</TableCell>
                       <TableCell className="text-right">{formatCurrency(c.total_contract_value)}</TableCell>
-                      <TableCell>
-                        <Badge variant={statusVariant[c.status?.status_current] ?? "outline"}>
-                          {c.status?.status_current ?? "—"}
-                        </Badge>
-                      </TableCell>
                       <TableCell>{formatDate(c.contract_emission_date)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">

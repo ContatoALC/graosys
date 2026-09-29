@@ -93,13 +93,13 @@ export function ExecutionPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Status Atual</TableHead>
+                  <TableHead>Alterar Status</TableHead>
                   <TableHead>Nº Contrato</TableHead>
                   <TableHead>Produto / Safra</TableHead>
                   <TableHead>Quantidade</TableHead>
                   <TableHead>Retirada</TableHead>
                   <TableHead>Período</TableHead>
-                  <TableHead>Status Atual</TableHead>
-                  <TableHead>Alterar Status</TableHead>
                   <TableHead>Envio</TableHead>
                   <TableHead className="w-32" />
                 </TableRow>
@@ -119,18 +119,6 @@ export function ExecutionPage() {
                 ) : (
                   contracts.map((c) => (
                     <TableRow key={c.id}>
-                      <TableCell className="font-medium"><button type="button" className="text-left underline-offset-2 hover:underline" title="Ver envios" onClick={() => setEmailContract(c)}>{c.number_contract}</button></TableCell>
-                      <TableCell>{c.name_product}<br /><span className="text-xs text-muted-foreground">{c.crop}</span></TableCell>
-                      <TableCell>
-                        {c.quantity} {c.type_quantity}
-                        {c.price_type === "to_fix" && (
-                          <button type="button" className="text-xs text-muted-foreground underline-offset-2 hover:underline" title="Ver e lançar fixações" onClick={() => setFixContract(c)}>
-                            A fixar: {Math.round((Number(c.fixed_quantity) / (Number(c.quantity) || 1)) * 100)}% fixado
-                          </button>
-                        )}
-                      </TableCell>
-                      <TableCell>{c.pickup_location}</TableCell>
-                      <TableCell className="text-xs">{formatDate(c.initial_pickup_date)} — {formatDate(c.final_pickup_date)}</TableCell>
                       <TableCell>
                         <Badge variant={statusVariant[c.status?.status_current] ?? "outline"}>
                           {c.status?.status_current ?? "—"}
@@ -150,6 +138,18 @@ export function ExecutionPage() {
                           </SelectContent>
                         </Select>
                       </TableCell>
+                      <TableCell className="font-medium"><button type="button" className="text-left underline-offset-2 hover:underline" title="Ver envios" onClick={() => setEmailContract(c)}>{c.number_contract}</button></TableCell>
+                      <TableCell>{c.name_product}<br /><span className="text-xs text-muted-foreground">{c.crop}</span></TableCell>
+                      <TableCell>
+                        {c.quantity} {c.type_quantity}
+                        {c.price_type === "to_fix" && (
+                          <button type="button" className="text-xs text-muted-foreground underline-offset-2 hover:underline" title="Ver e lançar fixações" onClick={() => setFixContract(c)}>
+                            A fixar: {Math.round((Number(c.fixed_quantity) / (Number(c.quantity) || 1)) * 100)}% fixado
+                          </button>
+                        )}
+                      </TableCell>
+                      <TableCell>{c.pickup_location}</TableCell>
+                      <TableCell className="text-xs">{formatDate(c.initial_pickup_date)} — {formatDate(c.final_pickup_date)}</TableCell>
                       <TableCell className="text-xs">
                         <button type="button" className="space-y-0.5 text-left" title="Ver envios" onClick={() => setEmailContract(c)}>
                           {emailSummary[c.id]?.seller || emailSummary[c.id]?.buyer ? (
