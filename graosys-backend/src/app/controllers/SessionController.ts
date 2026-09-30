@@ -239,11 +239,16 @@ export class SessionController {
       );
       const link = `${frontendUrl}/reset-password?token=${token}`;
       try {
-        await sendPlatformEmail(user.email, "Redefinição de senha - GraoSys", `
-          <p>Olá, ${escapeHtml(user.name)}.</p>
-          <p>Recebemos um pedido para redefinir a sua senha no GraoSys. Para criar uma nova senha, acesse o link abaixo (válido por 1 hora):</p>
-          <p><a href="${link}">${link}</a></p>
-          <p>Se não foi você que pediu, ignore este e-mail: a sua senha atual continua valendo.</p>`);
+        await sendPlatformEmail(user.email, "Redefinição de senha - GraoSys", {
+          preheader: "Use o link para criar uma nova senha. Ele vale por 1 hora.",
+          title: "Redefinição de senha",
+          paragraphs: [
+            `Olá, ${user.name}.`,
+            "Recebemos um pedido para redefinir a sua senha no GraoSys. Para criar uma nova senha, use o botão abaixo. O link vale por 1 hora e só pode ser usado uma vez.",
+          ],
+          button: { label: "Criar nova senha", url: link },
+          note: "Se não foi você que pediu, ignore este e-mail: a sua senha atual continua valendo.",
+        });
         await audit(user.tenant_id, user.id, true);
       } catch (err) {
         console.error("Falha ao enviar e-mail de redefinição de senha:", (err as Error).message);
@@ -281,4 +286,3 @@ export class SessionController {
   }
 }
 
-const escapeHtml = (v: string) => String(v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
