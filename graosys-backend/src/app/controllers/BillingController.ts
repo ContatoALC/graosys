@@ -10,10 +10,20 @@ const ALLOWED_FIELDS: (keyof Billing)[] = [
   "observation",
 ];
 
+// Campo numérico em branco no formulário chega como "" (inválido para decimal). O líquido é sempre recalculado aqui.
+function applyValues(b: Billing): void {
+  const num = (v: unknown) => (v === "" || v === null || v === undefined ? 0 : Number(v));
+  b.total_service_value = num(b.total_service_value);
+  b.irrf_value = num(b.irrf_value);
+  b.adjustment_value = num(b.adjustment_value);
+  b.liquid_value = b.total_service_value - b.irrf_value + b.adjustment_value;
+}
+
 export class BillingController {
   async create(req: Request, res: Response) {
     const billingRepo = AppDataSource.getRepository(Billing);
     const billing = billingRepo.create({ ...pickFields<Billing>(req.body, ALLOWED_FIELDS), tenant_id: req.user.tenant_id, owner_record: req.user.name });
+    applyValues(billing);
     await billingRepo.save(billing);
     return res.status(201).json(billing);
   }
@@ -54,6 +64,7 @@ export class BillingController {
     const billing = await billingRepo.findOne({ where: { id: req.params.id, tenant_id: req.user.tenant_id } });
     if (!billing) return res.status(404).json({ error: "Recebimento não encontrado" });
     Object.assign(billing, pickFields<Billing>(req.body, ALLOWED_FIELDS));
+    applyValues(billing);
     await billingRepo.save(billing);
     return res.json(billing);
   }
