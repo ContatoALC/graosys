@@ -1,0 +1,38 @@
+name: Testes obrigatórios
+
+# Falha o PR quando o código do app muda e nenhum teste E2E é criado/alterado.
+# Para exceções reais (texto, estilo, refactor sem mudança de comportamento),
+# adicione a label "sem-teste" no PR — fica registrado quem pulou e por quê.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  check:
+    name: Mudou o app → mudou os testes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verificar
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          SKIP: ${{ contains(github.event.pull_request.labels.*.name, 'sem-teste') }}
+        run: |
+          changed=$(git diff --name-only "$BASE" "$HEAD")
+          app=$(echo "$changed" | grep -E '^graosys-frontend/src/|^graosys-backend/src/(app|routes)/' || true)
+          tests=$(echo "$changed" | grep -E '^graosys-frontend/tests/' || true)
+
+          if [ -z "$app" ]; then echo "Nenhuma mudança no código do app."; exit 0; fi
+          if [ -n "$tests" ]; then echo "Código e testes alterados juntos. ✔"; echo "$tests"; exit 0; fi
+          if [ "$SKIP" = "true" ]; then echo "::warning::PR marcado com 'sem-teste' — sem testes novos."; exit 0; fi
+
+          echo "::error::Este PR altera o app mas não cria nem altera nenhum teste em graosys-frontend/tests/."
+          echo "Arquivos do app alterados:"; echo "$app"
+          echo ""
+          echo "Adicione/atualize um spec, ou use a label 'sem-teste' se a mudança não altera comportamento."
+          exit 1

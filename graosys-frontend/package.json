@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:public": "playwright test --project=public",
+    "test:report": "playwright show-report"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -34,6 +38,7 @@
     "zod": "^3.23.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^20.11.5",
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",

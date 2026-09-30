@@ -1,0 +1,94 @@
+name: Playwright E2E
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: E2E (Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: graosys
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      # Backend
+      PORT: "3333"
+      NODE_ENV: development
+      TYPEORM_HOST: localhost
+      TYPEORM_PORT: "5432"
+      TYPEORM_USERNAME: postgres
+      TYPEORM_PASSWORD: ci
+      TYPEORM_DATABASE: graosys
+      TYPEORM_SSL: "false"
+      MIGRATION_SSL: "false"
+      JWT_SECRET: e2e-only-secret-not-used-anywhere-else-000
+      EMAIL_ENCRYPTION_KEY: e2e-only-encryption-key-0000000000000
+      FRONTEND_URL: http://localhost:5173
+      # Usuário de teste criado pelo seed (banco descartável do CI)
+      SEED_ADMIN_EMAIL: e2e@graosys.test
+      SEED_ADMIN_PASSWORD: e2e-Senha-123
+      E2E_EMAIL: e2e@graosys.test
+      E2E_PASSWORD: e2e-Senha-123
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            graosys-backend/package-lock.json
+            graosys-frontend/package-lock.json
+
+      - name: Backend — instalar, migrar e criar usuário de teste
+        working-directory: graosys-backend
+        run: |
+          npm ci
+          npm run migration:run
+          npm run seed
+
+      - name: Backend — subir API
+        working-directory: graosys-backend
+        run: |
+          nohup npx ts-node --transpile-only src/server.ts > ../backend.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -s -o /dev/null http://localhost:3333 && exit 0
+            sleep 1
+          done
+          echo "::error::Backend não subiu"; cat ../backend.log; exit 1
+
+      - name: Frontend — instalar
+        working-directory: graosys-frontend
+        run: npm ci
+
+      - name: Instalar apenas o Chromium
+        working-directory: graosys-frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Rodar testes
+        working-directory: graosys-frontend
+        run: npm test
+
+      - name: Log do backend (em caso de falha)
+        if: failure()
+        run: cat backend.log || true
+
+      - name: Relatório HTML (em caso de falha)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: graosys-frontend/playwright-report/
+          retention-days: 7
