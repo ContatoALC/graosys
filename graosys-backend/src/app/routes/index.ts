@@ -137,6 +137,7 @@ router.get("/api/platform/audit", requireSuperadmin, audit.platformList);
 router.get("/api/platform/audit/actions", requireSuperadmin, audit.platformActions);
 router.get("/api/platform/sessions/overview", requireSuperadmin, audit.platformSessions);
 router.get("/api/platform/summary", requireSuperadmin, platform.summary);
+router.get("/api/platform/volume", requireSuperadmin, platform.volume);
 router.get("/api/platform/plans", requireSuperadmin, platform.plans);
 router.get("/api/platform/tenants", requireSuperadmin, platform.listTenants);
 router.post("/api/platform/tenants", requireSuperadmin, platform.createTenant);

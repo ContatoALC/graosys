@@ -2,3 +2,5 @@
 docs/
 .DS_Store
 Claude outputs/
+.mcp.json
+CLAUDE.md

@@ -41,7 +41,9 @@ export async function getTenantMailer(tenant: Tenant): Promise<TenantMailer> {
   });
   return {
     transporter,
-    from: `"${tenant.name}" <${process.env.SMTP_USER}>`,
+    // Sem SMTP próprio o envio sai pela conta da plataforma, então o remetente é o da GraoSys
+    // (mesmo padrão do platformMailer); a corretora segue recebendo a cópia oculta.
+    from: process.env.SMTP_FROM || `"GraoSys" <${process.env.SMTP_USER}>`,
     bcc: [tenant.email].filter(Boolean),
     signature: null,
   };

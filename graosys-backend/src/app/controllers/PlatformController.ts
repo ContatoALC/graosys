@@ -5,6 +5,7 @@ import { Tenant } from "../entities/Tenant";
 import { User } from "../entities/User";
 import { EMAIL_RE, MIN_PASSWORD, emailInUse, endUserSessions, normalizeEmail } from "../../services/accounts";
 import { PLAN_KEYS as PLANS, PLANS as PLAN_INFO, monthlyPrice } from "../../config/plans";
+import { platformVolume } from "../../services/platformVolume";
 
 const STATUSES = ["active", "inactive", "suspended"];
 const ROLES = ["admin", "user"];
@@ -39,6 +40,11 @@ export class PlatformController {
     `);
     const mrr = billable.reduce((sum: number, t: any) => sum + monthlyPrice(t.plan, Number(t.active_users)), 0);
     return res.json({ ...Object.fromEntries(Object.entries(row).map(([k, v]) => [k, Number(v)])), mrr });
+  }
+
+  async volume(req: Request, res: Response) {
+    const q = (k: string) => (typeof req.query[k] === "string" ? String(req.query[k]) : undefined);
+    return res.json(await platformVolume({ from: q("from"), to: q("to"), includeInternal: q("include_internal") === "true" }));
   }
 
   async listTenants(req: Request, res: Response) {
