@@ -29,7 +29,46 @@ const EMAIL_BODY_SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
   allowedSchemes: ["http", "https", "mailto"],
 };
 
+const EMAIL_RE = /^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/;
+const MAX_RECIPIENTS = 20;
+
+// Limpa uma lista de destinatários: tira espaços, põe em minúsculas e remove repetidos.
+// Devolve o primeiro endereço inválido em "invalid" para a mensagem de erro.
+function cleanRecipients(raw: unknown): { list: string[]; invalid?: string } {
+  if (raw === undefined || raw === null) return { list: [] };
+  if (!Array.isArray(raw)) return { list: [], invalid: String(raw) };
+  const list: string[] = [];
+  for (const item of raw) {
+    const email = String(item ?? "").trim().toLowerCase();
+    if (!email) continue;
+    if (!EMAIL_RE.test(email) || email.length > 254) return { list: [], invalid: email };
+    if (!list.includes(email)) list.push(email);
+  }
+  return { list };
+}
+
 export class EmailController {
+  // Grupos de e-mail do vendedor e do comprador, gravados no contrato pela tela de envio
+  // (a parte não precisa estar no cadastro de clientes).
+  async saveRecipients(req: Request, res: Response) {
+    const repo = AppDataSource.getRepository(GrainContract);
+    const contract = await repo.findOne({ where: { id: req.params.id, tenant_id: req.user.tenant_id } });
+    if (!contract) return res.status(404).json({ error: "Contrato não encontrado" });
+
+    const seller = cleanRecipients(req.body?.seller);
+    const buyer = cleanRecipients(req.body?.buyer);
+    const invalid = seller.invalid ?? buyer.invalid;
+    if (invalid !== undefined) return res.status(400).json({ error: `E-mail inválido: ${invalid.slice(0, 80)}` });
+    if (seller.list.length > MAX_RECIPIENTS || buyer.list.length > MAX_RECIPIENTS) {
+      return res.status(400).json({ error: `Informe no máximo ${MAX_RECIPIENTS} e-mails por parte` });
+    }
+
+    contract.list_email_seller = seller.list;
+    contract.list_email_buyer = buyer.list;
+    await repo.save(contract);
+    return res.json({ list_email_seller: seller.list, list_email_buyer: buyer.list });
+  }
+
   async sendContractEmail(req: Request, res: Response) {
     const { contract_id, copy_correct } = req.body;
     const { tenant_id } = req.user;

@@ -5,7 +5,7 @@ import { api } from "@/services/api";
 import { cn } from "@/lib/utils";
 
 export interface BankAccount { bank?: string; agency?: string; account?: string; pix?: string }
-export interface ClientOption { id: string; name: string; nickname?: string; cnpj_cpf?: string; account?: BankAccount[] }
+export interface ClientOption { id: string; name: string; nickname?: string; cnpj_cpf?: string; account?: BankAccount[]; contacts?: { name?: string; email: string }[] }
 
 interface Props {
   value: string;

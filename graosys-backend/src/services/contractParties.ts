@@ -44,3 +44,20 @@ export function normalizeBankAccounts(raw: unknown): object[] {
   if (!Array.isArray(raw)) return [];
   return raw.map(normalizePaymentAccount).filter((a): a is NonNullable<typeof a> => a !== null).slice(0, 20);
 }
+
+const EMAIL_RE = /^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/;
+
+// E-mails do cadastro de cliente que recebem os contratos: { name?, email }, e-mail em minúsculas e sem repetidos.
+// Devolve o primeiro endereço inválido em "invalid" para a mensagem de erro.
+export function normalizeContacts(raw: unknown): { list: { name?: string; email: string }[]; invalid?: string } {
+  if (!Array.isArray(raw)) return { list: [] };
+  const list: { name?: string; email: string }[] = [];
+  for (const item of raw) {
+    const r = (item && typeof item === "object" ? item : {}) as Record<string, unknown>;
+    const email = String(r.email ?? "").trim().toLowerCase();
+    if (!email) continue; // linha em branco
+    if (!EMAIL_RE.test(email) || email.length > 254) return { list: [], invalid: email };
+    if (!list.some((c) => c.email === email)) list.push({ name: str(r.name), email });
+  }
+  return { list: list.slice(0, 20) };
+}

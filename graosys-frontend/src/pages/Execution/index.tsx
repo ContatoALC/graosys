@@ -190,7 +190,8 @@ export function ExecutionPage() {
       </div>
 
       <ContractFixationsDialog contract={fixContract} onClose={() => setFixContract(null)} onChanged={load} />
-      <ContractEmailDialog contract={emailContract} canSend={canSend} onClose={() => setEmailContract(null)} onSent={loadSummary} />
+      <ContractEmailDialog contract={emailContract} canSend={canSend} onClose={() => setEmailContract(null)} onSent={loadSummary}
+        onRecipients={(contractId, lists) => setContracts((prev) => prev.map((c) => (c.id === contractId ? { ...c, ...lists } : c)))} />
     </div>
   );
 }

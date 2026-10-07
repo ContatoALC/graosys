@@ -11,6 +11,7 @@ const FRIENDLY: Record<string, string> = {
   "email.send-contract.create": "contracts.email_send",
   "email.send-custom.create": "email.send_custom",
   "auth.reset-password.create": "auth.password_reset",
+  "contracts.email-recipients.update": "contracts.email_recipients",
   "contracts.fixations.create": "contracts.fixation_add",
   "contracts.fixations.delete": "contracts.fixation_remove",
   "auth.heartbeat.create": "",

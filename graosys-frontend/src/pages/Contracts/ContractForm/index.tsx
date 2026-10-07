@@ -78,7 +78,7 @@ export function ContractFormPage() {
   const [clientAccounts, setClientAccounts] = useState<Record<string, BankAccount[]>>({});
   const rememberClient = (c: ClientOption | null) => { if (c) setClientAccounts((m) => ({ ...m, [c.id]: c.account || [] })); };
 
-  const { register, handleSubmit, reset, control, setValue, watch, formState: { errors } } = useForm<ContractForm>({
+  const { register, handleSubmit, reset, control, setValue, getValues, watch, formState: { errors } } = useForm<ContractForm>({
     defaultValues: {
       type_quantity: "sc",
       type_currency: "BRL",
@@ -98,6 +98,16 @@ export function ContractFormPage() {
   const emailsSeller = useFieldArray({ control, name: "list_email_seller" });
   const emailsBuyer = useFieldArray({ control, name: "list_email_buyer" });
   const contractBrokers = useFieldArray({ control, name: "brokers" });
+
+  // Ao escolher um cliente do cadastro, os e-mails dele entram na lista da parte (sem repetir os que já estão).
+  function addClientEmails(side: "seller" | "buyer", client: ClientOption | null) {
+    const list = side === "seller" ? emailsSeller : emailsBuyer;
+    const current = getValues(`list_email_${side}`).map((e) => e.value.trim().toLowerCase());
+    for (const contact of client?.contacts || []) {
+      const email = (contact.email || "").trim().toLowerCase();
+      if (email && !current.includes(email)) { list.append({ value: email }); current.push(email); }
+    }
+  }
 
   useEffect(() => {
     api.get("/api/products").then((r) => setProducts(r.data)).catch(console.error);
@@ -280,7 +290,7 @@ export function ContractFormPage() {
                         <div className="flex gap-2">
                           <Controller name={`seller.${i}.value`} control={control} rules={{ required: i === 0 }} render={({ field: f }) => (
                             <ClientPicker value={f.value} onChange={f.onChange} placeholder="Buscar ou digitar o vendedor"
-                              onPick={(c) => { setValue(`seller.${i}.client_id`, c?.id ?? null, { shouldDirty: true }); rememberClient(c); }} />
+                              onPick={(c) => { setValue(`seller.${i}.client_id`, c?.id ?? null, { shouldDirty: true }); rememberClient(c); addClientEmails("seller", c); }} />
                           )} />
                           {sellers.fields.length > 1 && (
                             <Button type="button" variant="ghost" size="icon" onClick={() => sellers.remove(i)}>
@@ -320,7 +330,7 @@ export function ContractFormPage() {
                         <div className="flex gap-2">
                           <Controller name={`buyer.${i}.value`} control={control} rules={{ required: i === 0 }} render={({ field: f }) => (
                             <ClientPicker value={f.value} onChange={f.onChange} placeholder="Buscar ou digitar o comprador"
-                              onPick={(c) => { setValue(`buyer.${i}.client_id`, c?.id ?? null, { shouldDirty: true }); rememberClient(c); }} />
+                              onPick={(c) => { setValue(`buyer.${i}.client_id`, c?.id ?? null, { shouldDirty: true }); rememberClient(c); addClientEmails("buyer", c); }} />
                           )} />
                           {buyers.fields.length > 1 && (
                             <Button type="button" variant="ghost" size="icon" onClick={() => buyers.remove(i)}>

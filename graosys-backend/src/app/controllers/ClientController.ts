@@ -4,7 +4,16 @@ import { Client } from "../entities/Client";
 import { ILike } from "typeorm";
 import { pickFields } from "../../utils/pickFields";
 import { resolveCountry } from "../../utils/countries";
-import { normalizeBankAccounts } from "../../services/contractParties";
+import { normalizeBankAccounts, normalizeContacts } from "../../services/contractParties";
+
+// Limpa os e-mails de contato do cliente; devolve a mensagem de erro se houver endereço inválido.
+function applyContacts(input: Partial<Client>): string | null {
+  if (input.contacts === undefined) return null;
+  const contacts = normalizeContacts(input.contacts);
+  if (contacts.invalid !== undefined) return `E-mail inválido: ${contacts.invalid.slice(0, 80)}`;
+  input.contacts = contacts.list;
+  return null;
+}
 
 const ALLOWED_FIELDS: (keyof Client)[] = [
   "nickname", "name", "address", "number", "complement", "district", "city", "state",
@@ -17,6 +26,8 @@ export class ClientController {
     const clientRepo = AppDataSource.getRepository(Client);
     const input = pickFields<Client>(req.body, ALLOWED_FIELDS);
     if (input.account !== undefined) input.account = normalizeBankAccounts(input.account);
+    const contactsError = applyContacts(input);
+    if (contactsError) return res.status(400).json({ error: contactsError });
     const place = resolveCountry(input.country, input.country_code);
     if ("error" in place) return res.status(400).json({ error: place.error });
     const client = clientRepo.create({ ...input, ...place, tenant_id: req.user.tenant_id });
@@ -65,6 +76,8 @@ export class ClientController {
     if (!client) return res.status(404).json({ error: "Cliente não encontrado" });
     const input = pickFields<Client>(req.body, ALLOWED_FIELDS);
     if (input.account !== undefined) input.account = normalizeBankAccounts(input.account);
+    const contactsError = applyContacts(input);
+    if (contactsError) return res.status(400).json({ error: contactsError });
     if (input.country !== undefined || input.country_code !== undefined) {
       // Trocar o país sem informar o código faz o código ser inferido; desconhecido exige o código.
       const place = resolveCountry(input.country ?? client.country, input.country_code ?? (input.country !== undefined ? undefined : client.country_code));

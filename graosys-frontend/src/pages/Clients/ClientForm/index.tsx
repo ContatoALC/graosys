@@ -32,6 +32,7 @@ interface ClientForm {
   ins_est: string;
   ins_mun: string;
   account: { bank: string; agency: string; account: string; pix: string }[];
+  contacts: { name: string; email: string }[];
 }
 
 export function ClientFormPage() {
@@ -46,14 +47,15 @@ export function ClientFormPage() {
   const lastCep = useRef("");
 
   const { register, handleSubmit, reset, control, setValue, getValues, formState: { errors } } = useForm<ClientForm>({
-    defaultValues: { kind: "PJ", situation: "active", country: "Brasil", country_code: "BR", account: [] },
+    defaultValues: { kind: "PJ", situation: "active", country: "Brasil", country_code: "BR", account: [], contacts: [] },
   });
   const accounts = useFieldArray({ control, name: "account" });
+  const contacts = useFieldArray({ control, name: "contacts" });
 
   useEffect(() => {
     if (isEditing) {
       api.get(`/api/clients/${id}`).then((r) => {
-        reset({ ...r.data, account: Array.isArray(r.data.account) ? r.data.account : [] });
+        reset({ ...r.data, account: Array.isArray(r.data.account) ? r.data.account : [], contacts: Array.isArray(r.data.contacts) ? r.data.contacts : [] });
         lastCep.current = digitsOf(r.data.zip_code);
       }).catch(console.error);
     }
@@ -284,7 +286,7 @@ export function ClientFormPage() {
             <CardContent className="space-y-3">
               {accounts.fields.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma conta cadastrada. As contas aparecem como opção de pagamento nos contratos em que o cliente é vendedor.</p>}
               {accounts.fields.map((field, i) => (
-                <div key={field.id} className="grid grid-cols-[1.4fr_0.8fr_1fr_1.2fr_auto] items-end gap-2">
+                <div key={field.id} className="grid grid-cols-2 items-end gap-2 md:grid-cols-[1.4fr_0.8fr_1fr_1.2fr_auto]">
                   <div className="space-y-1"><Label className="text-xs">Banco</Label><Input {...register(`account.${i}.bank`)} placeholder="Ex.: Banco do Brasil" /></div>
                   <div className="space-y-1"><Label className="text-xs">Agência</Label><Input {...register(`account.${i}.agency`)} /></div>
                   <div className="space-y-1"><Label className="text-xs">Conta</Label><Input {...register(`account.${i}.account`)} /></div>
@@ -294,6 +296,27 @@ export function ClientFormPage() {
               ))}
               <Button type="button" variant="outline" size="sm" onClick={() => accounts.append({ bank: "", agency: "", account: "", pix: "" })}>
                 <Plus className="mr-1 h-3 w-3" />Adicionar conta
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* E-mails que recebem os contratos */}
+          <Card>
+            <CardHeader><CardTitle className="text-base">E-mails para Envio de Contratos</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {contacts.fields.length === 0 && <p className="text-sm text-muted-foreground">Nenhum e-mail cadastrado. Estes endereços entram como destinatários quando o cliente é escolhido como vendedor ou comprador de um contrato.</p>}
+              {contacts.fields.map((field, i) => (
+                <div key={field.id} className="grid grid-cols-1 items-end gap-2 sm:grid-cols-[1fr_1.4fr_auto]">
+                  <div className="space-y-1"><Label className="text-xs">Nome / setor</Label><Input {...register(`contacts.${i}.name`)} placeholder="Ex.: Financeiro" /></div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">E-mail</Label>
+                    <Input type="email" placeholder="email@exemplo.com" {...register(`contacts.${i}.email`, { required: true, pattern: /^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/ })} className={errors.contacts?.[i]?.email ? "border-destructive" : ""} />
+                  </div>
+                  <Button type="button" variant="ghost" size="icon" aria-label="Remover e-mail" onClick={() => contacts.remove(i)}><X className="h-4 w-4" /></Button>
+                </div>
+              ))}
+              <Button type="button" variant="outline" size="sm" onClick={() => contacts.append({ name: "", email: "" })}>
+                <Plus className="mr-1 h-3 w-3" />Adicionar e-mail
               </Button>
             </CardContent>
           </Card>
