@@ -22,6 +22,7 @@ export function PlatformTabs() {
   const { pathname } = useLocation();
   const tabs = [
     { to: "/platform", label: "Corretoras", active: pathname === "/platform" || pathname.startsWith("/platform/tenants") },
+    { to: "/platform/volume", label: "Volume", active: pathname.startsWith("/platform/volume") },
     { to: "/platform/leads", label: "Prospecção", active: pathname.startsWith("/platform/leads") },
     { to: "/platform/audit", label: "Auditoria", active: pathname.startsWith("/platform/audit") },
     { to: "/platform/sessions", label: "Sessões", active: pathname.startsWith("/platform/sessions") },

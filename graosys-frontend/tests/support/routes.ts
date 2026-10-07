@@ -56,6 +56,7 @@ export const ROUTES: AppRoute[] = [
   { path: "/platform/audit", heading: "Painel de Controle" },
   { path: "/platform/sessions", heading: "Painel de Controle" },
   { path: "/platform/leads", heading: "Painel de Controle" },
+  { path: "/platform/volume", heading: "Painel de Controle", coveredBy: "tests/app/platform-volume.spec.ts" },
   { path: "/platform/leads/:id", coveredBy: "tests/app/leads.spec.ts" },
   { path: "/platform/tenants/:id", coveredBy: "tests/app/platform.spec.ts" },
   { path: "/my-account", heading: "Minha Conta" },

@@ -24,6 +24,7 @@ import { AdminAuditPage } from "@/pages/Admin/Audit";
 import { AdminSessionsPage } from "@/pages/Admin/Sessions";
 import { PlatformAuditPage } from "@/pages/Platform/Audit";
 import { PlatformSessionsPage } from "@/pages/Platform/Sessions";
+import { PlatformVolumePage } from "@/pages/Platform/Volume";
 import { ManagementPage } from "@/pages/Management";
 import { PlatformPage } from "@/pages/Platform";
 import { PlatformLeadsPage } from "@/pages/Platform/Leads";
@@ -93,6 +94,7 @@ export function AppRoutes() {
         <Route path="platform" element={<SuperadminRoute><PlatformPage /></SuperadminRoute>} />
         <Route path="platform/audit" element={<SuperadminRoute><PlatformAuditPage /></SuperadminRoute>} />
         <Route path="platform/sessions" element={<SuperadminRoute><PlatformSessionsPage /></SuperadminRoute>} />
+        <Route path="platform/volume" element={<SuperadminRoute><PlatformVolumePage /></SuperadminRoute>} />
         <Route path="platform/leads" element={<SuperadminRoute><PlatformLeadsPage /></SuperadminRoute>} />
         <Route path="platform/leads/:id" element={<SuperadminRoute><PlatformLeadDetailPage /></SuperadminRoute>} />
         <Route path="platform/tenants/:id" element={<SuperadminRoute><PlatformTenantDetailPage /></SuperadminRoute>} />
