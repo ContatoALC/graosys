@@ -1,6 +1,9 @@
 import { Request, Response } from "express";
 import { AppDataSource } from "../../database/data-source";
 import { Tenant } from "../entities/Tenant";
+import { pickFields } from "../../utils/pickFields";
+
+const ALLOWED_FIELDS: (keyof Tenant)[] = ["name", "cnpj", "email", "phone", "address", "number", "complement", "district", "city", "state", "zip_code"];
 
 export class TenantController {
   async getCurrent(req: Request, res: Response) {
@@ -18,8 +21,9 @@ export class TenantController {
     const tenant = await tenantRepo.findOne({ where: { id: req.user.tenant_id } });
     if (!tenant) return res.status(404).json({ error: "Tenant não encontrado" });
 
-    const { name, cnpj, email, phone } = req.body;
-    Object.assign(tenant, { name, cnpj, email, phone });
+    const input = pickFields<Tenant>(req.body, ALLOWED_FIELDS);
+    if (input.name !== undefined && !String(input.name).trim()) return res.status(400).json({ error: "Informe o nome da corretora" });
+    Object.assign(tenant, input);
     await tenantRepo.save(tenant);
     return res.json(tenant);
   }

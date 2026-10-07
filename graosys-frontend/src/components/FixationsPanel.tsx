@@ -8,13 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { api } from "@/services/api";
-import { framePricePreview, moneyFmt, qtyFmt } from "@/lib/pricing";
+import { defaultConversionFactor, framePpePreview, framePricePreview, moneyFmt, qtyFmt } from "@/lib/pricing";
 
 const STATUS: Record<string, { label: string; variant: any }> = {
   waiting: { label: "Aguardando fixação", variant: "warning" }, partial: { label: "Parcialmente fixado", variant: "outline" }, fixed: { label: "Totalmente fixado", variant: "success" },
 };
 const today = () => new Date().toISOString().slice(0, 10);
 const dmy = (d: string) => d.split("-").reverse().join("/");
+const seqLabel = (n?: number | null) => (n ? `F${String(n).padStart(2, "0")}` : "—");
 
 // Fixações de um contrato a fixar: saldo, preço médio, lançamento e exclusão. O servidor valida e calcula o preço.
 export function FixationsPanel({ contract, canEdit, onChanged, embedded = false }: { contract: any; canEdit: boolean; onChanged: () => void; embedded?: boolean }) {
@@ -38,20 +39,23 @@ export function FixationsPanel({ contract, canEdit, onChanged, embedded = false 
       chicago: fixedComponent("frame_chicago") ? String(Number(contract.frame_chicago)) : "",
       premium: fixedComponent("frame_premium") ? String(Number(contract.frame_premium)) : "",
       exchange_rate: fixedComponent("frame_exchange") ? String(Number(contract.frame_exchange)) : "",
+      conversion_factor: "", fobbings: "",
     });
     setError(""); setOpen(true);
   }
 
-  const preview = useMemo(() => isFrame
-    ? framePricePreview({ chicago: Number(form.chicago), premium: Number(form.premium), exchange: Number(form.exchange_rate) }, { product: contract.name_product, unit, currency: cur })
-    : null, [form, isFrame]);
+  const frameInput = { chicago: Number(form.chicago), premium: Number(form.premium), exchange: Number(form.exchange_rate), factor: Number(form.conversion_factor) || undefined, fobbings: Number(form.fobbings) || undefined };
+  const preview = useMemo(() => isFrame ? framePricePreview(frameInput, { product: contract.name_product, unit, currency: cur }) : null, [form, isFrame]);
+  const ppePreview = useMemo(() => isFrame ? framePpePreview(frameInput, contract.name_product) : null, [form, isFrame]);
 
   async function save() {
     setSaving(true); setError("");
     try {
       await api.post(`/api/contracts/${contract.id}/fixations`, {
         fixation_date: form.fixation_date, quantity: Number(form.quantity), notes: form.notes || undefined,
-        ...(isFrame ? { chicago: form.chicago, premium: form.premium, exchange_rate: form.exchange_rate } : { price: Number(form.price) }),
+        ...(isFrame
+          ? { chicago: form.chicago, premium: form.premium, exchange_rate: form.exchange_rate, conversion_factor: form.conversion_factor || undefined, fobbings: form.fobbings || undefined }
+          : { price: Number(form.price) }),
       });
       setOpen(false); load(); onChanged();
     } catch (e: any) { setError(e.response?.data?.error || "Erro ao lançar fixação"); }
@@ -103,15 +107,16 @@ export function FixationsPanel({ contract, canEdit, onChanged, embedded = false 
 
         <Table>
           <TableHeader><TableRow>
-            <TableHead>Data</TableHead><TableHead className="text-right">Quantidade</TableHead>
+            <TableHead>Nº</TableHead><TableHead>Data</TableHead><TableHead className="text-right">Quantidade</TableHead>
             {isFrame && <><TableHead className="text-right">Chicago</TableHead><TableHead className="text-right">Prêmio</TableHead>{cur !== "USD" && <TableHead className="text-right">Câmbio</TableHead>}</>}
             <TableHead className="text-right">Preço / {unit}</TableHead><TableHead>Lançado por</TableHead><TableHead className="w-10" />
           </TableRow></TableHeader>
           <TableBody>
             {data.fixations.length === 0 ? (
-              <TableRow><TableCell colSpan={8} className="h-16 text-center text-sm text-muted-foreground">Nenhuma fixação lançada</TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="h-16 text-center text-sm text-muted-foreground">Nenhuma fixação lançada</TableCell></TableRow>
             ) : data.fixations.map((f) => (
               <TableRow key={f.id}>
+                <TableCell className="font-medium">{seqLabel(f.sequence)}</TableCell>
                 <TableCell>{dmy(f.fixation_date)}</TableCell><TableCell className="text-right">{qtyFmt(f.quantity)}</TableCell>
                 {isFrame && <><TableCell className="text-right">{f.chicago ?? "—"}</TableCell><TableCell className="text-right">{f.premium ?? "—"}</TableCell>{cur !== "USD" && <TableCell className="text-right">{f.exchange_rate ?? "—"}</TableCell>}</>}
                 <TableCell className="text-right font-medium">{moneyFmt(Number(f.price), cur)}</TableCell>
@@ -141,7 +146,18 @@ export function FixationsPanel({ contract, canEdit, onChanged, embedded = false 
                   {field("chicago", "Chicago (c/bu)", fixedComponent("frame_chicago"))}
                   {cur !== "USD" && field("exchange_rate", "Câmbio (R$/US$)", fixedComponent("frame_exchange"), "0.000001")}
                 </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="fix-factor">Fator de conversão (bu/t)</Label>
+                    <Input id="fix-factor" type="number" step="0.000001" placeholder={`Padrão: ${defaultConversionFactor(contract.name_product).toLocaleString("pt-BR", { maximumFractionDigits: 4 })}`} value={form.conversion_factor ?? ""} onChange={(e) => setForm({ ...form, conversion_factor: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="fix-fobbings">Fobbings (US$/t)</Label>
+                    <Input id="fix-fobbings" type="number" step="0.0001" min="0" placeholder="0" value={form.fobbings ?? ""} onChange={(e) => setForm({ ...form, fobbings: e.target.value })} />
+                  </div>
+                </div>
                 <div className="rounded-md bg-muted/40 p-3 text-sm">
+                  <p data-testid="ppe-preview">PPE (paridade de exportação): <strong>{ppePreview === null ? "—" : `${moneyFmt(ppePreview, "USD")} / t`}</strong></p>
                   Prévia do preço: <strong>{preview === null ? "preencha os componentes" : `${moneyFmt(preview, cur)} / ${unit}`}</strong>
                   <p className="text-xs text-muted-foreground">O valor final é calculado e gravado pelo servidor.</p>
                 </div>

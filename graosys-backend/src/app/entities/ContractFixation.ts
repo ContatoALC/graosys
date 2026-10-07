@@ -14,6 +14,9 @@ export class ContractFixation {
   @Column()
   contract_id: string;
 
+  @Column({ type: "int", nullable: true })
+  sequence: number | null; // ordem da fixação no contrato (F01, F02...)
+
   @Column({ type: "varchar" })
   fixation_date: string; // AAAA-MM-DD
 
@@ -31,6 +34,16 @@ export class ContractFixation {
 
   @Column("decimal", { precision: 15, scale: 6, nullable: true })
   exchange_rate: number | null; // R$ por US$
+
+  // Memória de cálculo (Frame): PPE = (Chicago + prêmio) / 100 × fator − fobbings, em US$ por tonelada.
+  @Column("decimal", { precision: 15, scale: 6, nullable: true })
+  conversion_factor: number | null; // bushels por tonelada
+
+  @Column("decimal", { precision: 15, scale: 4, nullable: true })
+  fobbings: number | null; // US$ por tonelada
+
+  @Column("decimal", { precision: 15, scale: 4, nullable: true })
+  ppe: number | null; // preço de paridade de exportação, US$ por tonelada
 
   @Column("decimal", { precision: 15, scale: 4 })
   price: number; // por unidade do contrato, na moeda do contrato

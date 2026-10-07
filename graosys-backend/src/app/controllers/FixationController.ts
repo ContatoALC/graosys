@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { AppDataSource } from "../../database/data-source";
 import { GrainContract } from "../entities/GrainContract";
 import { ContractFixation } from "../entities/ContractFixation";
-import { framePrice, round } from "../../services/pricing";
+import { defaultConversionFactor, framePpe, framePrice, round } from "../../services/pricing";
 import { applyTotals } from "../../services/contractTotals";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -44,7 +44,7 @@ export class FixationController {
     if (!contract) return;
     const fixations = await AppDataSource.getRepository(ContractFixation).find({
       where: { tenant_id: req.user.tenant_id, contract_id: contract.id },
-      order: { fixation_date: "ASC", created_at: "ASC" },
+      order: { sequence: "ASC", fixation_date: "ASC", created_at: "ASC" },
     });
     return res.json({ fixations, summary: fixationSummary(contract, fixations) });
   }
@@ -72,6 +72,7 @@ export class FixationController {
       if (!b.fixation_date || !DATE_RE.test(String(b.fixation_date))) return { status: 400, error: "Data da fixação inválida" } as const;
 
       let chicago: number | null = null, premium: number | null = null, exchange: number | null = null, price: number;
+      let factor: number | null = null, fobbings: number | null = null, ppe: number | null = null;
       if (contract.fixation_mode === "market") {
         price = Number(b.price);
         if (!Number.isFinite(price) || price <= 0) return { status: 400, error: "Informe o preço de mercado da fixação" } as const;
@@ -83,12 +84,22 @@ export class FixationController {
         if (chicago === null || !(chicago > 0)) return { status: 400, error: "Informe o valor de Chicago (c/bu)" } as const;
         if (premium === null || !Number.isFinite(premium)) return { status: 400, error: "Informe o prêmio (c/bu)" } as const;
         if (contract.type_currency !== "USD" && (exchange === null || !(exchange > 0))) return { status: 400, error: "Informe o câmbio (R$/US$)" } as const;
-        price = framePrice({ chicago, premium, exchange }, { product: contract.name_product, unit: contract.type_quantity, currency: contract.type_currency });
+        // Memória de cálculo: fator e fobbings são opcionais (padrão do produto e zero).
+        const customFactor = num(b.conversion_factor);
+        fobbings = num(b.fobbings);
+        if (customFactor !== null && !(customFactor > 0)) return { status: 400, error: "Fator de conversão inválido" } as const;
+        if (fobbings !== null && !(fobbings >= 0)) return { status: 400, error: "Fobbings inválido" } as const;
+        const frame = { chicago, premium, exchange, factor: customFactor, fobbings };
+        ppe = round(framePpe(frame, contract.name_product));
+        if (!(ppe > 0)) return { status: 400, error: "Os fobbings não podem ser maiores que o valor de Chicago + prêmio" } as const;
+        factor = round(customFactor ?? defaultConversionFactor(contract.name_product), 6);
+        price = framePrice(frame, { product: contract.name_product, unit: contract.type_quantity, currency: contract.type_currency });
       }
 
       const fixation = await fixRepo.save(fixRepo.create({
         tenant_id, contract_id: contract.id, fixation_date: String(b.fixation_date), quantity: round(quantity), mode: contract.fixation_mode || "frame",
-        chicago, premium, exchange_rate: exchange, price, notes: b.notes ? String(b.notes).slice(0, 255) : null,
+        sequence: existing.reduce((max, f) => Math.max(max, Number(f.sequence) || 0), 0) + 1,
+        chicago, premium, exchange_rate: exchange, conversion_factor: factor, fobbings, ppe, price, notes: b.notes ? String(b.notes).slice(0, 255) : null,
         created_by_id: req.user.id, created_by_name: req.user.name,
       }));
       await recompute(contract, [...existing, fixation]);

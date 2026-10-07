@@ -2,12 +2,22 @@
 export const unitKg = (unit?: string) => (unit === "ton" ? 1000 : unit === "kg" ? 1 : 60);
 export const bushelKg = (product?: string) => (/milho/i.test(product || "") ? 25.4012 : 27.2155);
 
+export const defaultConversionFactor = (product?: string) => 1000 / bushelKg(product);
+
+// PPE em US$ por tonelada: (Chicago + prêmio) / 100 × fator − fobbings. Fator e fobbings são opcionais.
+export function framePpePreview(v: { chicago: number; premium: number; factor?: number; fobbings?: number }, product?: string): number | null {
+  if (![v.chicago, v.premium].every(Number.isFinite) || v.chicago <= 0) return null;
+  const factor = v.factor && v.factor > 0 ? v.factor : defaultConversionFactor(product);
+  return ((v.chicago + v.premium) / 100) * factor - (v.fobbings || 0);
+}
+
 export function framePricePreview(
-  v: { chicago: number; premium: number; exchange?: number },
+  v: { chicago: number; premium: number; exchange?: number; factor?: number; fobbings?: number },
   o: { product?: string; unit?: string; currency: string }
 ): number | null {
-  if (![v.chicago, v.premium].every(Number.isFinite) || v.chicago <= 0) return null;
-  const usd = ((v.chicago + v.premium) / 100 / bushelKg(o.product)) * unitKg(o.unit);
+  const ppe = framePpePreview(v, o.product);
+  if (ppe === null || ppe <= 0) return null;
+  const usd = (ppe / 1000) * unitKg(o.unit);
   if (o.currency === "USD") return usd;
   return v.exchange && v.exchange > 0 ? usd * v.exchange : null;
 }

@@ -4,17 +4,20 @@ import { Input } from "@/components/ui/input";
 import { api } from "@/services/api";
 import { cn } from "@/lib/utils";
 
-interface ClientOption { id: string; name: string; nickname?: string; cnpj_cpf?: string }
+export interface BankAccount { bank?: string; agency?: string; account?: string; pix?: string }
+export interface ClientOption { id: string; name: string; nickname?: string; cnpj_cpf?: string; account?: BankAccount[] }
 
 interface Props {
   value: string;
   onChange: (name: string) => void;
+  /** Cliente escolhido da lista; null quando o usuário volta a digitar (texto livre, sem vínculo). */
+  onPick?: (client: ClientOption | null) => void;
   placeholder?: string;
   className?: string;
 }
 
 // Campo de texto com busca na base de clientes da corretora. O texto livre continua permitido.
-export function ClientPicker({ value, onChange, placeholder, className }: Props) {
+export function ClientPicker({ value, onChange, onPick, placeholder, className }: Props) {
   const [options, setOptions] = useState<ClientOption[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -49,7 +52,7 @@ export function ClientPicker({ value, onChange, placeholder, className }: Props)
         value={value}
         autoComplete="off"
         onFocus={() => { setOpen(true); search(value); }}
-        onChange={(e) => { onChange(e.target.value); setOpen(true); search(e.target.value); }}
+        onChange={(e) => { onChange(e.target.value); onPick?.(null); setOpen(true); search(e.target.value); }}
       />
       {open && (
         <div className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
@@ -62,7 +65,7 @@ export function ClientPicker({ value, onChange, placeholder, className }: Props)
               key={c.id}
               type="button"
               className="flex w-full flex-col rounded-sm px-3 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground"
-              onClick={() => { onChange(c.name); setOpen(false); }}
+              onClick={() => { onChange(c.name); onPick?.(c); setOpen(false); }}
             >
               <span className="font-medium">{c.name}</span>
               <span className="text-xs text-muted-foreground">{[c.nickname, c.cnpj_cpf].filter(Boolean).join(" · ")}</span>

@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/services/api";
 
 const MAX_BYTES = 300 * 1024;
+const COMPANY_FIELDS = ["address", "number", "complement", "district", "city", "state", "zip_code"] as const;
 const positions = [
   { value: "left", label: "Esquerda" },
   { value: "center", label: "Centro" },
@@ -51,6 +53,9 @@ export function AdminPdfLayoutPage() {
   const [message, setMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [previewing, setPreviewing] = useState(false);
+  const [company, setCompany] = useState<Record<string, string>>({});
+  const [companyMessage, setCompanyMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
+  const [savingCompany, setSavingCompany] = useState(false);
 
   useEffect(() => {
     api.get("/api/pdf-settings").then((r) => {
@@ -59,7 +64,28 @@ export function AdminPdfLayoutPage() {
       setLogo(s.logo_data); setLogoPosition(s.logo_position); setLogoWidth(s.logo_width);
       setWatermark(s.watermark_data); setWatermarkEnabled(s.watermark_enabled); setWatermarkOpacity(s.watermark_opacity);
     }).catch(console.error);
+    api.get("/api/tenant").then((r) => {
+      const next: Record<string, string> = {};
+      for (const k of COMPANY_FIELDS) next[k] = r.data?.[k] ?? "";
+      setCompany(next);
+    }).catch(console.error);
   }, []);
+
+  async function saveCompany() {
+    setCompanyMessage(null); setSavingCompany(true);
+    try {
+      await api.patch("/api/tenant", company);
+      setCompanyMessage({ type: "ok", text: "Endereço salvo" });
+    } catch (e: any) {
+      setCompanyMessage({ type: "error", text: e.response?.data?.error || "Erro ao salvar o endereço" });
+    } finally { setSavingCompany(false); }
+  }
+  const companyField = (k: (typeof COMPANY_FIELDS)[number], label: string, className = "", extra: Record<string, unknown> = {}) => (
+    <div className={`space-y-2 ${className}`}>
+      <Label htmlFor={`company-${k}`}>{label}</Label>
+      <Input id={`company-${k}`} value={company[k] ?? ""} onChange={(e) => setCompany({ ...company, [k]: e.target.value })} {...extra} />
+    </div>
+  );
 
   async function save(): Promise<boolean> {
     setMessage(null); setSaving(true);
@@ -125,6 +151,28 @@ export function AdminPdfLayoutPage() {
             <Button variant="outline" onClick={preview} disabled={saving || previewing}>{previewing ? "Gerando..." : "Salvar e pré-visualizar PDF"}</Button>
           </div>
           <p className="text-xs text-muted-foreground">PNG ou JPEG de até 300 KB cada. Para a marca d'água, prefira uma imagem com fundo transparente (PNG).</p>
+        </CardContent></Card>
+
+        <Card className="mt-6 max-w-2xl"><CardContent className="space-y-4 pt-6">
+          <div>
+            <h2 className="text-base font-semibold">Endereço da corretora</h2>
+            <p className="text-xs text-muted-foreground">Usado no cabeçalho dos contratos, por exemplo na linha de cidade e data.</p>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            {companyField("address", "Logradouro", "col-span-2")}
+            {companyField("number", "Número")}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            {companyField("complement", "Complemento")}
+            {companyField("district", "Bairro")}
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            {companyField("zip_code", "CEP")}
+            {companyField("city", "Cidade")}
+            {companyField("state", "UF", "", { maxLength: 2 })}
+          </div>
+          {companyMessage && <p className={companyMessage.type === "ok" ? "text-sm text-green-700" : "text-sm text-destructive"}>{companyMessage.text}</p>}
+          <Button onClick={saveCompany} disabled={savingCompany}>Salvar endereço</Button>
         </CardContent></Card>
       </div>
     </div>

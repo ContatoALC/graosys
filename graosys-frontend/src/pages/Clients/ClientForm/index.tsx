@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useForm, Controller } from "react-hook-form";
-import { AlertTriangle, ArrowLeft, Loader2 } from "lucide-react";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
+import { AlertTriangle, ArrowLeft, Loader2, Plus, X } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,7 @@ interface ClientForm {
   country_code: string;
   ins_est: string;
   ins_mun: string;
+  account: { bank: string; agency: string; account: string; pix: string }[];
 }
 
 export function ClientFormPage() {
@@ -45,13 +46,14 @@ export function ClientFormPage() {
   const lastCep = useRef("");
 
   const { register, handleSubmit, reset, control, setValue, getValues, formState: { errors } } = useForm<ClientForm>({
-    defaultValues: { kind: "PJ", situation: "active", country: "Brasil", country_code: "BR" },
+    defaultValues: { kind: "PJ", situation: "active", country: "Brasil", country_code: "BR", account: [] },
   });
+  const accounts = useFieldArray({ control, name: "account" });
 
   useEffect(() => {
     if (isEditing) {
       api.get(`/api/clients/${id}`).then((r) => {
-        reset(r.data);
+        reset({ ...r.data, account: Array.isArray(r.data.account) ? r.data.account : [] });
         lastCep.current = digitsOf(r.data.zip_code);
       }).catch(console.error);
     }
@@ -273,6 +275,26 @@ export function ClientFormPage() {
                   />
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Dados bancários */}
+          <Card>
+            <CardHeader><CardTitle className="text-base">Dados Bancários</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {accounts.fields.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma conta cadastrada. As contas aparecem como opção de pagamento nos contratos em que o cliente é vendedor.</p>}
+              {accounts.fields.map((field, i) => (
+                <div key={field.id} className="grid grid-cols-[1.4fr_0.8fr_1fr_1.2fr_auto] items-end gap-2">
+                  <div className="space-y-1"><Label className="text-xs">Banco</Label><Input {...register(`account.${i}.bank`)} placeholder="Ex.: Banco do Brasil" /></div>
+                  <div className="space-y-1"><Label className="text-xs">Agência</Label><Input {...register(`account.${i}.agency`)} /></div>
+                  <div className="space-y-1"><Label className="text-xs">Conta</Label><Input {...register(`account.${i}.account`)} /></div>
+                  <div className="space-y-1"><Label className="text-xs">Chave Pix</Label><Input {...register(`account.${i}.pix`)} /></div>
+                  <Button type="button" variant="ghost" size="icon" aria-label="Remover conta" onClick={() => accounts.remove(i)}><X className="h-4 w-4" /></Button>
+                </div>
+              ))}
+              <Button type="button" variant="outline" size="sm" onClick={() => accounts.append({ bank: "", agency: "", account: "", pix: "" })}>
+                <Plus className="mr-1 h-3 w-3" />Adicionar conta
+              </Button>
             </CardContent>
           </Card>
 

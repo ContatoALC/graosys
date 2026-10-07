@@ -9,14 +9,15 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/services/api";
-import { ClientPicker } from "@/components/ClientPicker";
+import { ClientPicker, type BankAccount, type ClientOption } from "@/components/ClientPicker";
 import { PriceModeSection } from "./PriceModeSection";
 
 interface ContractForm {
   number_broker: string;
   number_contract: string;
-  seller: { value: string }[];
-  buyer: { value: string }[];
+  seller: { value: string; client_id?: string | null }[];
+  buyer: { value: string; client_id?: string | null }[];
+  payment_account: BankAccount | null;
   list_email_seller: { value: string }[];
   list_email_buyer: { value: string }[];
   product: string;
@@ -60,6 +61,8 @@ interface ContractForm {
 }
 
 const selectClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const accountKey = (a?: BankAccount | null) => (a ? [a.bank, a.agency, a.account, a.pix].map((v) => v || "").join("|") : "");
+const accountLabel = (a: BankAccount) => [a.bank, a.agency && `Ag. ${a.agency}`, a.account && `C/C ${a.account}`, a.pix && `Pix ${a.pix}`].filter(Boolean).join(" · ");
 const pctLabel = (v: number | null | undefined) => (v === null || v === undefined ? "sem tabela" : `${v.toLocaleString("pt-BR", { maximumFractionDigits: 4 })}%`);
 
 export function ContractFormPage() {
@@ -71,6 +74,9 @@ export function ContractFormPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [brokerList, setBrokerList] = useState<any[]>([]);
   const [saved, setSaved] = useState<any | null>(null);
+  // Contas bancárias dos clientes vinculados (por id), para oferecer como conta de pagamento.
+  const [clientAccounts, setClientAccounts] = useState<Record<string, BankAccount[]>>({});
+  const rememberClient = (c: ClientOption | null) => { if (c) setClientAccounts((m) => ({ ...m, [c.id]: c.account || [] })); };
 
   const { register, handleSubmit, reset, control, setValue, watch, formState: { errors } } = useForm<ContractForm>({
     defaultValues: {
@@ -78,8 +84,9 @@ export function ContractFormPage() {
       type_currency: "BRL",
       price_type: "fixed",
       fixation_mode: "frame",
-      seller: [{ value: "" }],
-      buyer: [{ value: "" }],
+      seller: [{ value: "", client_id: null }],
+      buyer: [{ value: "", client_id: null }],
+      payment_account: null,
       list_email_seller: [],
       list_email_buyer: [],
       brokers: [],
@@ -100,8 +107,9 @@ export function ContractFormPage() {
         const d = r.data;
         reset({
           ...d,
-          seller: (d.seller || []).map((v: string) => ({ value: v })),
-          buyer: (d.buyer || []).map((v: string) => ({ value: v })),
+          seller: (d.seller || []).map((v: string, i: number) => ({ value: v, client_id: d.seller_ids?.[i] ?? null })),
+          buyer: (d.buyer || []).map((v: string, i: number) => ({ value: v, client_id: d.buyer_ids?.[i] ?? null })),
+          payment_account: d.payment_account ?? null,
           list_email_seller: (d.list_email_seller || []).map((v: string) => ({ value: v })),
           list_email_buyer: (d.list_email_buyer || []).map((v: string) => ({ value: v })),
           brokers: (d.brokers || []).map((b: any) => ({ broker_id: b.broker_id, commission_percent: b.commission_percent === null ? "" : String(b.commission_percent) })),
@@ -116,6 +124,9 @@ export function ContractFormPage() {
           frame_exchange: d.frame_exchange === null || d.frame_exchange === undefined ? "" : String(Number(d.frame_exchange)),
         });
         setSaved(d);
+        for (const clientId of (d.seller_ids || []).filter(Boolean)) {
+          api.get(`/api/clients/${clientId}`).then((c) => rememberClient(c.data)).catch(() => undefined);
+        }
       }).catch(console.error);
     }
   }, [id]);
@@ -139,8 +150,11 @@ export function ContractFormPage() {
     try {
       const payload = {
         ...data,
-        seller: data.seller.map((s) => s.value).filter(Boolean),
-        buyer: data.buyer.map((b) => b.value).filter(Boolean),
+        seller: data.seller.filter((s) => s.value).map((s) => s.value),
+        buyer: data.buyer.filter((b) => b.value).map((b) => b.value),
+        seller_ids: data.seller.filter((s) => s.value).map((s) => s.client_id ?? null),
+        buyer_ids: data.buyer.filter((b) => b.value).map((b) => b.client_id ?? null),
+        payment_account: data.payment_account ?? null,
         list_email_seller: data.list_email_seller.map((e) => e.value).filter(Boolean),
         list_email_buyer: data.list_email_buyer.map((e) => e.value).filter(Boolean),
         quantity: Number(data.quantity),
@@ -170,6 +184,17 @@ export function ContractFormPage() {
       setIsSaving(false);
     }
   }
+
+  // Opções de conta: as dos vendedores vinculados e, na edição, a que já está gravada no contrato.
+  const paymentAccount = watch("payment_account");
+  const accountOptions: BankAccount[] = [];
+  for (const s of watch("seller")) for (const a of (s.client_id && clientAccounts[s.client_id]) || []) {
+    if (accountKey(a) && !accountOptions.some((o) => accountKey(o) === accountKey(a))) accountOptions.push(a);
+  }
+  if (paymentAccount && !accountOptions.some((o) => accountKey(o) === accountKey(paymentAccount))) accountOptions.push(paymentAccount);
+  const linkedHint = (clientId?: string | null) => clientId
+    ? <p className="text-xs text-muted-foreground">Vinculado ao cadastro</p>
+    : null;
 
   return (
     <div className="flex flex-col">
@@ -251,16 +276,22 @@ export function ContractFormPage() {
                   <Label>Vendedor(es) *</Label>
                   <div className="space-y-2">
                     {sellers.fields.map((field, i) => (
-                      <div key={field.id} className="flex gap-2">
-                        <Controller name={`seller.${i}.value`} control={control} rules={{ required: i === 0 }} render={({ field: f }) => (<ClientPicker value={f.value} onChange={f.onChange} placeholder="Buscar ou digitar o vendedor" />)} />
-                        {sellers.fields.length > 1 && (
-                          <Button type="button" variant="ghost" size="icon" onClick={() => sellers.remove(i)}>
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
+                      <div key={field.id} data-testid={`seller-${i}`}>
+                        <div className="flex gap-2">
+                          <Controller name={`seller.${i}.value`} control={control} rules={{ required: i === 0 }} render={({ field: f }) => (
+                            <ClientPicker value={f.value} onChange={f.onChange} placeholder="Buscar ou digitar o vendedor"
+                              onPick={(c) => { setValue(`seller.${i}.client_id`, c?.id ?? null, { shouldDirty: true }); rememberClient(c); }} />
+                          )} />
+                          {sellers.fields.length > 1 && (
+                            <Button type="button" variant="ghost" size="icon" onClick={() => sellers.remove(i)}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                        {linkedHint(watch(`seller.${i}.client_id`))}
                       </div>
                     ))}
-                    <Button type="button" variant="outline" size="sm" onClick={() => sellers.append({ value: "" })}>
+                    <Button type="button" variant="outline" size="sm" onClick={() => sellers.append({ value: "", client_id: null })}>
                       <Plus className="mr-1 h-3 w-3" />Adicionar
                     </Button>
                   </div>
@@ -285,16 +316,22 @@ export function ContractFormPage() {
                   <Label>Comprador(es) *</Label>
                   <div className="space-y-2">
                     {buyers.fields.map((field, i) => (
-                      <div key={field.id} className="flex gap-2">
-                        <Controller name={`buyer.${i}.value`} control={control} rules={{ required: i === 0 }} render={({ field: f }) => (<ClientPicker value={f.value} onChange={f.onChange} placeholder="Buscar ou digitar o comprador" />)} />
-                        {buyers.fields.length > 1 && (
-                          <Button type="button" variant="ghost" size="icon" onClick={() => buyers.remove(i)}>
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
+                      <div key={field.id} data-testid={`buyer-${i}`}>
+                        <div className="flex gap-2">
+                          <Controller name={`buyer.${i}.value`} control={control} rules={{ required: i === 0 }} render={({ field: f }) => (
+                            <ClientPicker value={f.value} onChange={f.onChange} placeholder="Buscar ou digitar o comprador"
+                              onPick={(c) => { setValue(`buyer.${i}.client_id`, c?.id ?? null, { shouldDirty: true }); rememberClient(c); }} />
+                          )} />
+                          {buyers.fields.length > 1 && (
+                            <Button type="button" variant="ghost" size="icon" onClick={() => buyers.remove(i)}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                        {linkedHint(watch(`buyer.${i}.client_id`))}
                       </div>
                     ))}
-                    <Button type="button" variant="outline" size="sm" onClick={() => buyers.append({ value: "" })}>
+                    <Button type="button" variant="outline" size="sm" onClick={() => buyers.append({ value: "", client_id: null })}>
                       <Plus className="mr-1 h-3 w-3" />Adicionar
                     </Button>
                   </div>
@@ -395,6 +432,18 @@ export function ContractFormPage() {
                   <Label>Pagamento</Label>
                   <Input {...register("payment")} placeholder="Ex.: À vista, 30/60 dias" />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="payment-account">Conta para pagamento</Label>
+                <select
+                  id="payment-account" className={selectClass} disabled={accountOptions.length === 0}
+                  value={accountKey(paymentAccount)}
+                  onChange={(e) => setValue("payment_account", accountOptions.find((a) => accountKey(a) === e.target.value) ?? null, { shouldDirty: true })}
+                >
+                  <option value="">{accountOptions.length === 0 ? "Nenhuma conta disponível" : "Não informar"}</option>
+                  {accountOptions.map((a) => <option key={accountKey(a)} value={accountKey(a)}>{accountLabel(a)}</option>)}
+                </select>
+                <p className="text-xs text-muted-foreground">Contas bancárias dos vendedores vinculados ao cadastro de clientes.</p>
               </div>
             </CardContent>
           </Card>

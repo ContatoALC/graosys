@@ -9,11 +9,12 @@ import { ContractFixation } from "../entities/ContractFixation";
 import { withBillingStatus } from "../../services/billingStatus";
 import { loadContractBrokers, saveContractBrokers, validateContractBrokers } from "../../services/contractBrokers";
 import { ContractBroker } from "../entities/ContractBroker";
+import { linkContractParties, normalizePaymentAccount } from "../../services/contractParties";
 
 const ALLOWED_FIELDS: (keyof GrainContract)[] = [
-  "number_broker", "number_contract", "seller", "buyer", "list_email_seller", "list_email_buyer",
+  "number_broker", "number_contract", "seller", "buyer", "seller_ids", "buyer_ids", "list_email_seller", "list_email_buyer",
   "product", "name_product", "crop", "quality", "type_quantity", "quantity", "quantity_kg",
-  "quantity_bag", "type_currency", "price", "type_icms", "icms", "payment",
+  "quantity_bag", "type_currency", "price", "type_icms", "icms", "payment", "payment_account",
   "type_commission_seller", "commission_seller", "type_commission_buyer", "commission_buyer",
   "type_pickup", "pickup", "pickup_location", "inspection", "observation",
   "internal_communication", "destination", "complement_destination",
@@ -71,6 +72,8 @@ export class GrainContractController {
     normalizePricing(contract);
     contract.fixed_quantity = 0;
     applyTotals(contract);
+    await linkContractParties(req.user.tenant_id, contract);
+    contract.payment_account = normalizePaymentAccount(contract.payment_account);
     await AppDataSource.transaction(async (tx) => {
       await tx.getRepository(GrainContract).save(contract);
       if (Array.isArray(req.body.brokers)) await saveContractBrokers(tx, req.user.tenant_id, contract.id, req.body.brokers);
@@ -170,9 +173,14 @@ export class GrainContractController {
       delete (input as any).price; // o preço de um contrato a fixar vem das fixações
     }
 
+    // Trocar os nomes sem mandar os vínculos desfaz o vínculo antigo (o id não acompanha um nome novo).
+    if (input.seller !== undefined && input.seller_ids === undefined) input.seller_ids = [];
+    if (input.buyer !== undefined && input.buyer_ids === undefined) input.buyer_ids = [];
     Object.assign(contract, input);
     normalizePricing(contract);
     applyTotals(contract);
+    await linkContractParties(req.user.tenant_id, contract);
+    contract.payment_account = normalizePaymentAccount(contract.payment_account);
     await AppDataSource.transaction(async (tx) => {
       await tx.getRepository(GrainContract).save(contract);
       if (Array.isArray(req.body.brokers)) await saveContractBrokers(tx, req.user.tenant_id, contract.id, req.body.brokers);

@@ -21,6 +21,13 @@ export class GrainContract {
   @Column({ type: "jsonb", nullable: true, default: [] })
   buyer: string[];
 
+  // Vínculo com o cadastro de clientes, na mesma ordem de seller/buyer; null = nome digitado sem cadastro.
+  @Column({ type: "jsonb", nullable: true, default: [] })
+  seller_ids: (string | null)[];
+
+  @Column({ type: "jsonb", nullable: true, default: [] })
+  buyer_ids: (string | null)[];
+
   @Column({ type: "jsonb", nullable: true, default: [] })
   list_email_seller: string[];
 
@@ -90,6 +97,10 @@ export class GrainContract {
 
   @Column({ nullable: true })
   payment: string;
+
+  // Conta bancária do vendedor escolhida para o pagamento (cópia dos dados no momento da escolha).
+  @Column({ type: "jsonb", nullable: true })
+  payment_account: { bank?: string; agency?: string; account?: string; pix?: string } | null;
 
   @Column({ nullable: true })
   type_commission_seller: string; // % | R$/sc | R$/ton

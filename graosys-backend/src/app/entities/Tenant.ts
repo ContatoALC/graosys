@@ -21,6 +21,28 @@ export class Tenant {
   @Column({ nullable: true })
   phone: string;
 
+  // Endereço da corretora, usado no cabeçalho dos contratos em PDF.
+  @Column({ nullable: true })
+  address: string;
+
+  @Column({ nullable: true })
+  number: string;
+
+  @Column({ nullable: true })
+  complement: string;
+
+  @Column({ nullable: true })
+  district: string;
+
+  @Column({ nullable: true })
+  city: string;
+
+  @Column({ nullable: true })
+  state: string;
+
+  @Column({ nullable: true })
+  zip_code: string;
+
   @Column({ default: "active" })
   status: string; // active | inactive | suspended
 

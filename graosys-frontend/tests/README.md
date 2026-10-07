@@ -16,6 +16,7 @@ Sem backend dá para rodar só `npm run test:public`.
 | `app/routes.spec.ts` | Todas as telas abrem logado, sem erro JS e sem 5xx da API. |
 | `app/clients.spec.ts`, `app/platform.spec.ts` | Fluxos (cadastro/edição de cliente, detalhe de corretora). |
 | `app/contracts.spec.ts` | Cliente + produto + broker → contrato → edição em `/contracts/:id`; campos obrigatórios. |
+| `app/contract-template-data.spec.ts` | Dados dos templates de contrato: parte vinculada ao cadastro, conta de pagamento, fixações numeradas (F01…) com memória de cálculo (fator, fobbings, PPE) e endereço da corretora. |
 | `app/billing.spec.ts` | Recebimentos mudam o status de cobrança do contrato (A Faturar → A Receber → Parcial → Recebido; Em Atraso); cálculo do líquido. |
 | `app/broker-commissions.spec.ts` | Tabela de % por data do broker, % do contrato, parte liberada pelo que a corretora recebeu, filtro de período e produtividade. |
 | `app/permissions.spec.ts` | Usuário comum: menu, telas restritas redirecionam, API devolve 403; liberar módulo pelo Controle de Acesso. |

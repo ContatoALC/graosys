@@ -4,6 +4,7 @@ import { Client } from "../entities/Client";
 import { ILike } from "typeorm";
 import { pickFields } from "../../utils/pickFields";
 import { resolveCountry } from "../../utils/countries";
+import { normalizeBankAccounts } from "../../services/contractParties";
 
 const ALLOWED_FIELDS: (keyof Client)[] = [
   "nickname", "name", "address", "number", "complement", "district", "city", "state",
@@ -15,6 +16,7 @@ export class ClientController {
   async create(req: Request, res: Response) {
     const clientRepo = AppDataSource.getRepository(Client);
     const input = pickFields<Client>(req.body, ALLOWED_FIELDS);
+    if (input.account !== undefined) input.account = normalizeBankAccounts(input.account);
     const place = resolveCountry(input.country, input.country_code);
     if ("error" in place) return res.status(400).json({ error: place.error });
     const client = clientRepo.create({ ...input, ...place, tenant_id: req.user.tenant_id });
@@ -62,6 +64,7 @@ export class ClientController {
     const client = await clientRepo.findOne({ where: { id: req.params.id, tenant_id: req.user.tenant_id } });
     if (!client) return res.status(404).json({ error: "Cliente não encontrado" });
     const input = pickFields<Client>(req.body, ALLOWED_FIELDS);
+    if (input.account !== undefined) input.account = normalizeBankAccounts(input.account);
     if (input.country !== undefined || input.country_code !== undefined) {
       // Trocar o país sem informar o código faz o código ser inferido; desconhecido exige o código.
       const place = resolveCountry(input.country ?? client.country, input.country_code ?? (input.country !== undefined ? undefined : client.country_code));
