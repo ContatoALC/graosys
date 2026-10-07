@@ -10,6 +10,8 @@ import { withBillingStatus } from "../../services/billingStatus";
 import { loadContractBrokers, saveContractBrokers, validateContractBrokers } from "../../services/contractBrokers";
 import { ContractBroker } from "../entities/ContractBroker";
 import { linkContractParties, normalizePaymentAccount } from "../../services/contractParties";
+import { contractPdfFilename, generateContractPdf, getPdfFixations, getPdfSettings } from "../../services/contractPdf";
+import { Tenant } from "../entities/Tenant";
 
 const ALLOWED_FIELDS: (keyof GrainContract)[] = [
   "number_broker", "number_contract", "seller", "buyer", "seller_ids", "buyer_ids", "list_email_seller", "list_email_buyer",
@@ -152,6 +154,23 @@ export class GrainContractController {
     if (!contract) return res.status(404).json({ error: "Contrato não encontrado" });
     const [withStatus] = await withBillingStatus(req.user.tenant_id, [contract]);
     return res.json({ ...withStatus, brokers: await loadContractBrokers(req.user.tenant_id, contract.id, contract.contract_emission_date) });
+  }
+
+  // PDF do contrato (o mesmo anexado no e-mail), na via do vendedor ou do comprador, para abrir no navegador.
+  async pdf(req: Request, res: Response) {
+    const role = req.query.role === "Comprador" ? "Comprador" : "Vendedor";
+    const { tenant_id } = req.user;
+    const [contract, tenant] = await Promise.all([
+      AppDataSource.getRepository(GrainContract).findOne({ where: { id: req.params.id, tenant_id } }),
+      AppDataSource.getRepository(Tenant).findOne({ where: { id: tenant_id } }),
+    ]);
+    if (!contract) return res.status(404).json({ error: "Contrato não encontrado" });
+    if (!tenant) return res.status(404).json({ error: "Corretora não encontrada" });
+    const [layout, fixations] = await Promise.all([getPdfSettings(tenant_id), getPdfFixations(tenant_id, contract)]);
+    const pdf = await generateContractPdf(contract, tenant, role, layout, fixations);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="${contractPdfFilename(contract, role)}"`);
+    return res.send(pdf);
   }
 
   async update(req: Request, res: Response) {

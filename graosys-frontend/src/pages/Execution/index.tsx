@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Truck, Eye, Search, RefreshCw, Mail, Scale } from "lucide-react";
 import { ContractFixationsDialog } from "@/components/ContractFixationsDialog";
+import { ContractPdfButton } from "@/components/ContractPdfButton";
 import { BillingStatusBadge } from "@/components/BillingStatusBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { ContractEmailDialog } from "./ContractEmailDialog";
@@ -172,6 +173,7 @@ export function ExecutionPage() {
                             <Scale className="h-4 w-4" />
                           </Button>
                         )}
+                        <ContractPdfButton contractId={c.id} />
                         {canSend && (
                           <Button variant="ghost" size="icon" title="Enviar contrato por e-mail" onClick={() => setEmailContract(c)}>
                             <Mail className="h-4 w-4" />

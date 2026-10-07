@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Plus, Search, FileText, Eye, Copy, Scale } from "lucide-react";
 import { ContractFixationsDialog } from "@/components/ContractFixationsDialog";
+import { ContractPdfButton } from "@/components/ContractPdfButton";
 import { BillingStatusBadge } from "@/components/BillingStatusBadge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -146,6 +147,7 @@ export function ContractsPage() {
                               <Scale className="h-4 w-4" />
                             </Button>
                           )}
+                          <ContractPdfButton contractId={c.id} />
                           <Button variant="ghost" size="icon" title="Clonar contrato" disabled={cloningId === c.id} onClick={() => cloneContract(c)}>
                             <Copy className="h-4 w-4" />
                           </Button>

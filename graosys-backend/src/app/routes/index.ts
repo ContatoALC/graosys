@@ -88,6 +88,7 @@ router.get("/api/contracts/report", requirePermission("reports", "view"), contra
 router.get("/api/contracts", requirePermission("contracts", "view"), contract.getAll);
 router.get("/api/contracts/:id", requirePermission("contracts", "view"), contract.getById);
 router.post("/api/contracts", requirePermission("contracts", "create"), contract.create);
+router.get("/api/contracts/:id/pdf", requirePermission("contracts", "view"), contract.pdf);
 router.get("/api/contracts/:id/fixations", requirePermission("contracts", "view"), fixation.list);
 router.post("/api/contracts/:id/fixations", requirePermission("contracts", "edit"), fixation.create);
 router.delete("/api/contracts/:id/fixations/:fixationId", requirePermission("contracts", "edit"), fixation.remove);

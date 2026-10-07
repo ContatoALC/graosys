@@ -76,6 +76,19 @@ export function getPdfSettings(tenantId: string) {
   return AppDataSource.getRepository(TenantPdfSettings).findOne({ where: { tenant_id: tenantId } });
 }
 
+export function contractPdfFilename(contract: GrainContract, role: ContractPdfRole): string {
+  return `contrato_${String(contract.number_contract).replace(/[^\w.-]+/g, "_")}_${role.toLowerCase()}.pdf`;
+}
+
+// Fixações que entram no PDF, na ordem da numeração (F01, F02...); só contratos a fixar têm.
+export async function getPdfFixations(tenantId: string, contract: GrainContract): Promise<ContractFixation[]> {
+  if (contract.price_type !== "to_fix") return [];
+  return AppDataSource.getRepository(ContractFixation).find({
+    where: { tenant_id: tenantId, contract_id: contract.id },
+    order: { sequence: "ASC", fixation_date: "ASC", created_at: "ASC" },
+  });
+}
+
 export async function generateContractPdf(
   contract: GrainContract,
   tenant: Tenant,
