@@ -1,5 +1,5 @@
 import { test, expect } from "../support/fixtures";
-import { adminApi, contractPayload, post, uid } from "../support/api";
+import { adminApi, approvedContract, post, uid } from "../support/api";
 
 // Envio do contrato por e-mail: os grupos de destinatários de vendedor e comprador são digitados na
 // própria tela de envio (a parte não precisa estar no cadastro de clientes) e ficam gravados no contrato.
@@ -8,7 +8,7 @@ test.describe("Envio de contrato por e-mail", () => {
     test.setTimeout(20_000); // abre o diálogo duas vezes
     const number = `MAIL-${uid()}`;
     const api = await adminApi();
-    const contract = await post(api, "/api/contracts", contractPayload(number, { seller: ["Vendedor sem cadastro"], buyer: ["Comprador sem cadastro"] }));
+    const contract = await approvedContract(api, number, { seller: ["Vendedor sem cadastro"], buyer: ["Comprador sem cadastro"] });
 
     // O disparo em si é simulado: o ambiente de teste não tem servidor de e-mail.
     let sendBody: any = null;
@@ -98,7 +98,7 @@ test.describe("Envio de contrato por e-mail", () => {
 
     // Tela de envio: contrato antigo, vinculado ao cliente mas sem e-mails, recebe a sugestão do cadastro
     const number = `MAILC-${id}`;
-    await post(api, "/api/contracts", contractPayload(number, { seller: ["Vendedor sem cadastro"], buyer: [client], buyer_ids: [saved.id] }));
+    await approvedContract(api, number, { seller: ["Vendedor sem cadastro"], buyer: [client], buyer_ids: [saved.id] });
     await page.goto("/execution");
     await page.getByPlaceholder("Buscar contrato...").fill(number);
     await page.getByPlaceholder("Buscar contrato...").press("Enter");

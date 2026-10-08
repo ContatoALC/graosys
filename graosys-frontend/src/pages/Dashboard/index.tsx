@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { FileText, Users, DollarSign, Clock, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Badge } from "@/components/ui/badge";
+import { ContractStageBadge } from "@/components/ContractStageBadge";
 import { api } from "@/services/api";
 import { formatCurrency } from "@/lib/utils";
 import {
@@ -63,13 +63,6 @@ function KpiCard({
     </Card>
   );
 }
-
-const statusMap: Record<string, { label: string; variant: any }> = {
-  Ativo: { label: "Ativo", variant: "success" },
-  Cancelado: { label: "Cancelado", variant: "destructive" },
-  Encerrado: { label: "Encerrado", variant: "secondary" },
-  "Em Execução": { label: "Em Execução", variant: "warning" },
-};
 
 export function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -141,10 +134,6 @@ export function DashboardPage() {
                   ) : (
                     <div className="space-y-3">
                       {data?.recentContracts.map((c) => {
-                        const s = statusMap[c.status?.status_current] || {
-                          label: c.status?.status_current,
-                          variant: "outline",
-                        };
                         return (
                           <div
                             key={c.id}
@@ -159,7 +148,7 @@ export function DashboardPage() {
                               </p>
                             </div>
                             <div className="text-right">
-                              <Badge variant={s.variant}>{s.label}</Badge>
+                              <ContractStageBadge contract={c} />
                               <p className="mt-1 text-xs text-muted-foreground">
                                 {formatCurrency(c.total_contract_value)}
                               </p>

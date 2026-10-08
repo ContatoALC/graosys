@@ -43,7 +43,7 @@ export function ContractPdfButton({ contractId }: { contractId: string }) {
 
   return (
     <div ref={ref} className="relative inline-block">
-      <Button variant="ghost" size="icon" title="Ver PDF do contrato" aria-haspopup="menu" aria-expanded={open} disabled={loading} onClick={() => setOpen((v) => !v)}>
+      <Button variant="ghost" size="icon" className="h-8 w-8" title="Ver PDF do contrato" aria-haspopup="menu" aria-expanded={open} disabled={loading} onClick={() => setOpen((v) => !v)}>
         <FileDown className="h-4 w-4" />
       </Button>
       {open && (

@@ -1,5 +1,5 @@
 import { test, expect } from "../support/fixtures";
-import { adminApi, contractPayload, post, uid } from "../support/api";
+import { adminApi, approvedContract, contractPayload, post, uid } from "../support/api";
 
 // PDF do contrato direto da linha da lista (Contratos e Execução): o mesmo PDF anexado no e-mail,
 // na via do vendedor ou do comprador, aberto em nova aba.
@@ -8,10 +8,12 @@ test.describe("PDF do contrato na lista", () => {
     test.setTimeout(30_000); // duas telas, uma aba nova em cada
     const number = `PDF-${uid()}`;
     const api = await adminApi();
-    const contract = await post(api, "/api/contracts", contractPayload(number));
+    const contract = await approvedContract(api, number);
 
     const openVia = async (path: string, placeholder: string, via: string) => {
       await page.goto(path);
+      // Aprovado pela Execução, o contrato já saiu da fila de Contratos
+      if (path === "/contracts") await page.getByRole("button", { name: "Todos" }).click();
       await page.getByPlaceholder(placeholder).fill(number);
       await page.getByPlaceholder(placeholder).press("Enter");
       const row = page.getByRole("row", { name: new RegExp(number) });

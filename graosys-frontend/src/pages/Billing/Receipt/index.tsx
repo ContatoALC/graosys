@@ -4,7 +4,8 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ContractStageBadge } from "@/components/ContractStageBadge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -38,6 +39,8 @@ export function ReceiptPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Fila da Cobrança: contratos enviados ao cliente com comissão a receber.
+  const [queue, setQueue] = useState<any[]>([]);
 
   const { register, handleSubmit, reset, control, watch, setValue } = useForm<BillingForm>({
     defaultValues: { status: "pending", year: new Date().getFullYear().toString() },
@@ -61,6 +64,21 @@ export function ReceiptPage() {
     api.get("/api/billings/summary")
       .then((r) => setSummary(r.data.summary))
       .catch(console.error);
+    api.get("/api/contracts", { params: { department: "billing", limit: 100 } })
+      .then((r) => setQueue(r.data.data))
+      .catch(() => setQueue([]));
+  }
+
+  // Recebimento já preenchido com o contrato e o que falta receber da comissão.
+  function openForContract(c: any) {
+    const missing = Math.max(Number(c.commission_contract || 0) - Number(c.billing_received || 0), 0);
+    reset({
+      status: "pending", year: new Date().getFullYear().toString(),
+      number_contract: c.number_contract, number_broker: c.number_broker, product_name: c.name_product,
+      total_service_value: Math.round(missing * 100) / 100,
+    } as any);
+    setEditingId(null);
+    setShowDialog(true);
   }
 
   useEffect(() => { load(); }, []);
@@ -142,6 +160,45 @@ export function ReceiptPage() {
             </Card>
           </div>
         )}
+
+        <Card data-testid="billing-queue">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Fila da Cobrança</CardTitle>
+            <p className="text-sm text-muted-foreground">Contratos já enviados ao cliente. O contrato é concluído quando a comissão é toda recebida.</p>
+          </CardHeader>
+          <CardContent className="p-0">
+            {queue.length === 0 ? (
+              <p className="px-6 pb-6 text-sm text-muted-foreground">Nenhum contrato aguardando a Cobrança.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Etapa</TableHead>
+                    <TableHead>Nº Contrato</TableHead>
+                    <TableHead>Produto</TableHead>
+                    <TableHead className="text-right">Comissão</TableHead>
+                    <TableHead className="text-right">Recebido</TableHead>
+                    <TableHead />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {queue.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell><ContractStageBadge contract={c} /></TableCell>
+                      <TableCell className="font-medium">{c.number_contract}</TableCell>
+                      <TableCell>{c.name_product}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(c.commission_contract)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(c.billing_received)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" variant="outline" onClick={() => openForContract(c)}>Lançar recebimento</Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Search */}
         <div className="flex items-center gap-3">

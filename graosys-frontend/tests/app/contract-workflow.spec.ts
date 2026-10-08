@@ -90,3 +90,94 @@ test.describe("Fluxo do contrato por departamento", () => {
     }
   });
 });
+
+test.describe("Fluxo do contrato nas telas", () => {
+  test("Contratos envia, Execução devolve com motivo, Contratos corrige e a Execução aprova", async ({ page }) => {
+    test.setTimeout(40_000); // passa pelas duas filas duas vezes
+    const number = `FLX-${uid()}`;
+    const api = await adminApi();
+    const contract = await post(api, "/api/contracts", contractPayload(number));
+
+    const rowIn = async (path: string, placeholder: string) => {
+      await page.goto(path);
+      await page.getByPlaceholder(placeholder).fill(number);
+      await page.getByPlaceholder(placeholder).press("Enter");
+      return page.getByRole("row", { name: new RegExp(number) });
+    };
+
+    // Fila de Contratos: o selo diz o departamento; o próximo passo é enviar para a Execução
+    let row = await rowIn("/contracts", "Buscar por nº contrato...");
+    await expect(row.getByTestId("contract-stage")).toHaveText(/Contratos\s*· Em Elaboração/);
+    await row.getByRole("button", { name: "Enviar para Execução" }).click();
+    await expect(row.getByTestId("contract-stage")).toHaveText(/Execução\s*· Em Análise/);
+
+    // Fila da Execução: devolver pede o motivo
+    row = await rowIn("/execution", "Buscar contrato...");
+    await row.getByRole("button", { name: "Devolver" }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByRole("button", { name: "Confirmar" })).toBeDisabled();
+    await dialog.getByLabel("O que precisa ser corrigido em Contratos?").fill("Quantidade divergente");
+    await dialog.getByRole("button", { name: "Confirmar" }).click();
+    await expect(row.getByTestId("contract-stage")).toHaveText(/Contratos\s*· Devolvido/);
+
+    // De volta à fila de Contratos, com o motivo à vista
+    row = await rowIn("/contracts", "Buscar por nº contrato...");
+    await expect(row).toContainText("Motivo: Quantidade divergente");
+    await row.getByRole("button", { name: "Enviar para Execução" }).click();
+    await expect(row.getByTestId("contract-stage")).toHaveText(/Em Análise/);
+
+    // Execução aprova: o próximo passo vira enviar ao cliente
+    row = await rowIn("/execution", "Buscar contrato...");
+    await row.getByRole("button", { name: "Aprovar" }).click();
+    await expect(row.getByTestId("contract-stage")).toHaveText(/Execução\s*· Aguardando Envio/);
+    await expect(row.getByRole("button", { name: "Enviar ao cliente" })).toBeVisible();
+
+    // Página do contrato: histórico com quem passou adiante e por quê; cancelar pede motivo
+    await page.goto(`/contracts/${contract.id}`);
+    const timeline = page.getByTestId("contract-timeline");
+    await expect(timeline).toContainText("Devolvido para Contratos");
+    await expect(timeline).toContainText("Quantidade divergente");
+    await expect(timeline).toContainText("Aprovado pela Execução");
+    await page.getByRole("button", { name: "Cancelar contrato" }).click();
+    await page.getByRole("dialog").getByLabel("Por que o contrato está sendo cancelado?").fill("Negócio desfeito");
+    await page.getByRole("dialog").getByRole("button", { name: "Confirmar" }).click();
+    await expect(page.getByTestId("contract-stage").first()).toHaveText(/Cancelado/);
+    await expect(timeline).toContainText("Negócio desfeito");
+  });
+
+  test("novo contrato: registrar e enviar para a Execução; no fluxo simplificado o botão some", async ({ page }) => {
+    test.setTimeout(40_000);
+    const id = uid();
+    const number = `FLX-${id}`;
+    const api = await adminApi();
+    await post(api, "/api/products", { product_type: `FLX${id}`, name: `Produto FLX ${id}` });
+
+    await page.goto("/contracts/new");
+    await page.locator('input[name="number_broker"]').fill(`B-${id}`);
+    await page.locator('input[name="number_contract"]').fill(number);
+    await page.getByPlaceholder("Buscar ou digitar o vendedor").fill("Vendedor Fluxo");
+    await page.getByPlaceholder("Buscar ou digitar o comprador").fill("Comprador Fluxo");
+    await page.getByRole("combobox").filter({ hasText: "Selecione o produto" }).click();
+    await page.getByRole("option", { name: `Produto FLX ${id}` }).click();
+    await page.locator('input[name="crop"]').fill("2025/2026");
+    await page.locator('input[name="quantity"]').fill("100");
+    await page.locator('input[name="price"]').fill("50");
+    await page.getByRole("button", { name: "Registrar e enviar para Execução" }).click();
+    await expect(page).toHaveURL(/\/contracts$/);
+
+    const saved = (await (await api.get(`/api/contracts?search=${number}`)).json()).data[0];
+    expect(saved.status.status_current).toBe("Em Análise");
+
+    // Admin escolhe o fluxo simplificado: o contrato novo já nasce pronto para envio
+    await page.goto("/admin");
+    await page.getByRole("radio", { name: /Fluxo simplificado/ }).click();
+    await expect(page.getByRole("radio", { name: /Fluxo simplificado/ })).toHaveAttribute("aria-checked", "true");
+    try {
+      await page.goto("/contracts/new");
+      await expect(page.getByRole("button", { name: "Registrar Contrato" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Registrar e enviar para Execução" })).toHaveCount(0);
+    } finally {
+      await api.patch("/api/tenant", { data: { workflow_mode: "full" } });
+    }
+  });
+});

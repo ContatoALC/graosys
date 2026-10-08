@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { ArrowLeft, Loader2, Plus, X } from "lucide-react";
@@ -11,6 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { api } from "@/services/api";
 import { ClientPicker, type BankAccount, type ClientOption } from "@/components/ClientPicker";
 import { PriceModeSection } from "./PriceModeSection";
+import { ContractStageBadge } from "@/components/ContractStageBadge";
+import { ContractTimeline } from "@/components/ContractTimeline";
+import { ContractWorkflowActions } from "@/components/ContractWorkflowActions";
 
 interface ContractForm {
   number_broker: string;
@@ -74,6 +77,9 @@ export function ContractFormPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [brokerList, setBrokerList] = useState<any[]>([]);
   const [saved, setSaved] = useState<any | null>(null);
+  // Fluxo simplificado: o contrato já nasce pronto para envio, sem passar pela análise.
+  const [simpleFlow, setSimpleFlow] = useState(false);
+  const sendAfterSave = useRef(false);
   // Contas bancárias dos clientes vinculados (por id), para oferecer como conta de pagamento.
   const [clientAccounts, setClientAccounts] = useState<Record<string, BankAccount[]>>({});
   const rememberClient = (c: ClientOption | null) => { if (c) setClientAccounts((m) => ({ ...m, [c.id]: c.account || [] })); };
@@ -112,6 +118,7 @@ export function ContractFormPage() {
   useEffect(() => {
     api.get("/api/products").then((r) => setProducts(r.data)).catch(console.error);
     api.get("/api/brokers").then((r) => setBrokerList(r.data)).catch(console.error);
+    if (!isEditing) api.get("/api/tenant").then((r) => setSimpleFlow(r.data?.workflow_mode === "simple")).catch(() => undefined);
     if (isEditing) {
       api.get(`/api/contracts/${id}`).then((r) => {
         const d = r.data;
@@ -185,12 +192,16 @@ export function ContractFormPage() {
       if (isEditing) {
         await api.patch(`/api/contracts/${id}`, payload);
       } else {
-        await api.post("/api/contracts", payload);
+        const created = await api.post("/api/contracts", payload);
+        if (sendAfterSave.current && created.data.status?.status_current === "Em Elaboração") {
+          await api.post(`/api/contracts/${created.data.id}/workflow`, { action: "submit" });
+        }
       }
       navigate("/contracts");
     } catch (e: any) {
       setError(e.response?.data?.error || "Erro ao salvar contrato");
     } finally {
+      sendAfterSave.current = false;
       setIsSaving(false);
     }
   }
@@ -219,6 +230,17 @@ export function ContractFormPage() {
       />
 
       <div className="flex-1 p-6 max-w-4xl">
+        {isEditing && saved && (
+          <Card className="mb-6">
+            <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-6">
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Onde está o contrato</p>
+                <ContractStageBadge contract={saved} />
+              </div>
+              <ContractWorkflowActions contract={saved} onChanged={(u) => setSaved((prev: any) => ({ ...prev, ...u }))} />
+            </CardContent>
+          </Card>
+        )}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
 
           {/* Identificação */}
@@ -610,9 +632,21 @@ export function ContractFormPage() {
             <Button type="submit" disabled={isSaving}>
               {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</> : isEditing ? "Salvar Alterações" : "Registrar Contrato"}
             </Button>
+            {!isEditing && !simpleFlow && (
+              <Button type="button" variant="secondary" disabled={isSaving} onClick={() => { sendAfterSave.current = true; handleSubmit(onSubmit, () => { sendAfterSave.current = false; })(); }}>
+                Registrar e enviar para Execução
+              </Button>
+            )}
             <Button type="button" variant="outline" onClick={() => navigate("/contracts")}>Cancelar</Button>
           </div>
         </form>
+
+        {isEditing && saved && (
+          <Card className="mt-6">
+            <CardHeader><CardTitle className="text-base">Histórico do contrato</CardTitle></CardHeader>
+            <CardContent><ContractTimeline history={saved.status?.history} /></CardContent>
+          </Card>
+        )}
 
         {isEditing && saved?.price_type === "to_fix" && (
           <p className="mt-4 rounded-md border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">

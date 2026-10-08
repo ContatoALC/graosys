@@ -3,22 +3,18 @@ import { Link, useNavigate } from "react-router-dom";
 import { Plus, Search, FileText, Eye, Copy, Scale } from "lucide-react";
 import { ContractFixationsDialog } from "@/components/ContractFixationsDialog";
 import { ContractPdfButton } from "@/components/ContractPdfButton";
+import { ContractStageBadge } from "@/components/ContractStageBadge";
+import { ContractWorkflowActions } from "@/components/ContractWorkflowActions";
 import { BillingStatusBadge } from "@/components/BillingStatusBadge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { stageOf } from "@/lib/workflow";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/services/api";
 import { formatCurrency, formatDate } from "@/lib/utils";
-
-const statusVariant: Record<string, any> = {
-  Ativo: "success",
-  Cancelado: "destructive",
-  Encerrado: "secondary",
-  "Em Execução": "warning",
-};
 
 export function ContractsPage() {
   const [contracts, setContracts] = useState<any[]>([]);
@@ -28,6 +24,7 @@ export function ContractsPage() {
   const navigate = useNavigate();
   const [cloningId, setCloningId] = useState<string | null>(null);
   const [fixContract, setFixContract] = useState<any | null>(null);
+  const [view, setView] = useState<"queue" | "all">("queue");
 
   async function cloneContract(c: any) {
     if (!confirm(`Clonar o contrato ${c.number_contract}? O clone recebe o próximo número da sua base.`)) return;
@@ -41,9 +38,9 @@ export function ContractsPage() {
     }
   }
 
-  function load(q = "") {
+  function load(q = search, v = view) {
     setIsLoading(true);
-    api.get("/api/contracts", { params: { search: q || undefined, limit: 50 } })
+    api.get("/api/contracts", { params: { search: q || undefined, limit: 50, department: v === "queue" ? "contracts" : undefined } })
       .then((r) => { setContracts(r.data.data); setTotal(r.data.total); })
       .catch(console.error)
       .finally(() => setIsLoading(false));
@@ -51,11 +48,15 @@ export function ContractsPage() {
 
   useEffect(() => { load(); }, []);
 
+  const replace = (updated: any) => setContracts((prev) => prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)));
+  const changeView = (v: "queue" | "all") => { setView(v); load(search, v); };
+  const lastReason = (c: any) => c.status?.history?.at(-1)?.reason;
+
   return (
     <div className="flex flex-col">
       <PageHeader
         title="Contratos"
-        description={`${total} contratos cadastrados`}
+        description={view === "queue" ? `${total} contrato(s) com Contratos: em elaboração ou devolvidos pela Execução` : `${total} contratos cadastrados`}
         action={
           <Button asChild>
             <Link to="/contracts/new"><Plus className="mr-2 h-4 w-4" />Novo Contrato</Link>
@@ -77,6 +78,10 @@ export function ContractsPage() {
           </div>
           <Button variant="outline" onClick={() => load(search)}>Buscar</Button>
           {search && <Button variant="ghost" onClick={() => { setSearch(""); load(""); }}>Limpar</Button>}
+          <div className="ml-auto flex rounded-md border p-0.5" role="group" aria-label="Contratos exibidos">
+            <Button size="sm" variant={view === "queue" ? "default" : "ghost"} aria-pressed={view === "queue"} onClick={() => changeView("queue")}>Fila de Contratos</Button>
+            <Button size="sm" variant={view === "all" ? "default" : "ghost"} aria-pressed={view === "all"} onClick={() => changeView("all")}>Todos</Button>
+          </div>
         </div>
 
         <Card>
@@ -110,7 +115,7 @@ export function ContractsPage() {
                     <TableCell colSpan={10} className="h-32 text-center">
                       <div className="flex flex-col items-center gap-2">
                         <FileText className="h-8 w-8 text-muted-foreground" />
-                        <p className="text-muted-foreground">Nenhum contrato encontrado</p>
+                        <p className="text-muted-foreground">{view === "queue" ? "Nenhum contrato aguardando Contratos" : "Nenhum contrato encontrado"}</p>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -118,9 +123,10 @@ export function ContractsPage() {
                   contracts.map((c) => (
                     <TableRow key={c.id}>
                       <TableCell>
-                        <Badge variant={statusVariant[c.status?.status_current] ?? "outline"}>
-                          {c.status?.status_current ?? "—"}
-                        </Badge>
+                        <ContractStageBadge contract={c} />
+                        {stageOf(c) === "Devolvido" && lastReason(c) && (
+                          <p className="mt-1 max-w-[14rem] text-xs text-muted-foreground" title={lastReason(c)}>Motivo: {lastReason(c)}</p>
+                        )}
                       </TableCell>
                       <TableCell><BillingStatusBadge status={c.billing_status} /></TableCell>
                       <TableCell className="font-medium">
@@ -138,17 +144,18 @@ export function ContractsPage() {
                       <TableCell className="text-right">{formatCurrency(c.total_contract_value)}</TableCell>
                       <TableCell>{formatDate(c.contract_emission_date)}</TableCell>
                       <TableCell>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" asChild>
+                        <div className="flex flex-nowrap items-center">
+                          <span className="mr-1.5"><ContractWorkflowActions compact contract={c} only={["submit"]} onChanged={replace} /></span>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" title="Abrir contrato" asChild>
                             <Link to={`/contracts/${c.id}`}><Eye className="h-4 w-4" /></Link>
                           </Button>
-                          {c.price_type === "to_fix" && (
-                            <Button variant="ghost" size="icon" title="Fixações de preço" onClick={() => setFixContract(c)}>
+                          {c.price_type === "to_fix" ? (
+                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Fixações de preço" onClick={() => setFixContract(c)}>
                               <Scale className="h-4 w-4" />
                             </Button>
-                          )}
+                          ) : <span className="h-8 w-8" aria-hidden="true" />}
                           <ContractPdfButton contractId={c.id} />
-                          <Button variant="ghost" size="icon" title="Clonar contrato" disabled={cloningId === c.id} onClick={() => cloneContract(c)}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" title="Clonar contrato" disabled={cloningId === c.id} onClick={() => cloneContract(c)}>
                             <Copy className="h-4 w-4" />
                           </Button>
                         </div>

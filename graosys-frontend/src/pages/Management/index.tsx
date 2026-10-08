@@ -5,8 +5,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/services/api";
+import { DEPARTMENTS, departmentOf } from "@/lib/workflow";
 
 const selectClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+// Soma os status por departamento (a cor de cada fatia é a do departamento).
+function byDepartment(rows: { status: string; contracts: number }[]) {
+  const acc = new Map<string, { label: string; color: string; contracts: number }>();
+  for (const r of rows) {
+    const dept = departmentOf(r.status);
+    const label = dept ? DEPARTMENTS[dept].label : r.status;
+    const item = acc.get(label) ?? { label, color: dept ? DEPARTMENTS[dept].color : "#94a3b8", contracts: 0 };
+    item.contracts += Number(r.contracts);
+    acc.set(label, item);
+  }
+  return [...acc.values()];
+}
+
 const COLORS = ["#3f6b37", "#b9791f", "#2563eb", "#9333ea", "#dc2626", "#0d9488", "#64748b"];
 const PERIODS = [
   { value: "30", label: "Últimos 30 dias" }, { value: "90", label: "Últimos 90 dias" }, { value: "365", label: "Últimos 12 meses" },
@@ -116,13 +130,13 @@ export function ManagementPage() {
               </Card>
 
               <Card>
-                <CardHeader><CardTitle className="text-base">Contratos por status</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-base">Contratos por departamento</CardTitle></CardHeader>
                 <CardContent className="h-64">
                   {data.by_status.length === 0 ? <p className="pt-16 text-center text-sm text-muted-foreground">Sem dados</p> : (
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <Pie data={data.by_status} dataKey="contracts" nameKey="status" innerRadius={45} outerRadius={80} paddingAngle={2}>
-                          {data.by_status.map((_: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                        <Pie data={byDepartment(data.by_status)} dataKey="contracts" nameKey="label" innerRadius={45} outerRadius={80} paddingAngle={2}>
+                          {byDepartment(data.by_status).map((d) => <Cell key={d.label} fill={d.color} />)}
                         </Pie>
                         <Tooltip /><Legend />
                       </PieChart>

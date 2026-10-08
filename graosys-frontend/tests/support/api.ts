@@ -65,3 +65,12 @@ export function contractPayload(number: string, extra: Record<string, unknown> =
     ...extra,
   };
 }
+
+/** Contrato que já passou por Contratos e pela análise da Execução (fica "Aguardando Envio"). */
+export async function approvedContract(api: APIRequestContext, number: string, extra: Record<string, unknown> = {}) {
+  let contract = await post(api, "/api/contracts", contractPayload(number, extra));
+  // Outro spec pode ligar o fluxo simplificado por um instante: só avança o que faltar.
+  if (contract.status.status_current === "Em Elaboração") contract = await post(api, `/api/contracts/${contract.id}/workflow`, { action: "submit" });
+  if (contract.status.status_current === "Em Análise") contract = await post(api, `/api/contracts/${contract.id}/workflow`, { action: "approve" });
+  return contract;
+}

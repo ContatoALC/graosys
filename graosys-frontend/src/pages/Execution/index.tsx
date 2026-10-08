@@ -3,33 +3,27 @@ import { Link } from "react-router-dom";
 import { Truck, Eye, Search, RefreshCw, Mail, Scale } from "lucide-react";
 import { ContractFixationsDialog } from "@/components/ContractFixationsDialog";
 import { ContractPdfButton } from "@/components/ContractPdfButton";
-import { BillingStatusBadge } from "@/components/BillingStatusBadge";
+import { ContractStageBadge } from "@/components/ContractStageBadge";
+import { ContractWorkflowActions, ROW_BUTTON } from "@/components/ContractWorkflowActions";
 import { useAuth } from "@/contexts/AuthContext";
 import { ContractEmailDialog } from "./ContractEmailDialog";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/services/api";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
+import { DEPARTMENTS, SENDABLE_STAGES, stageOf } from "@/lib/workflow";
 
-const statusVariant: Record<string, any> = {
-  Ativo: "success",
-  Cancelado: "destructive",
-  "Em Execução": "warning",
-  Encerrado: "secondary",
-};
-
-const STATUS_OPTIONS = ["Ativo", "Em Execução", "Encerrado", "Cancelado"];
+// Etapas da Execução, na ordem da linha de montagem.
+const QUEUE_STAGES = ["Em Análise", "Aguardando Envio", "Em Embarque"];
 
 export function ExecutionPage() {
   const [contracts, setContracts] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [view, setView] = useState<"queue" | "all">("queue");
   const [emailContract, setEmailContract] = useState<any | null>(null);
   const [fixContract, setFixContract] = useState<any | null>(null);
   const [emailSummary, setEmailSummary] = useState<Record<string, { seller?: string; buyer?: string }>>({});
@@ -40,9 +34,9 @@ export function ExecutionPage() {
     api.get("/api/email/summary").then((r) => setEmailSummary(r.data)).catch(() => setEmailSummary({}));
   }
 
-  function load() {
+  function load(v = view) {
     setIsLoading(true);
-    api.get("/api/contracts", { params: { search: search || undefined, limit: 100 } })
+    api.get("/api/contracts", { params: { search: search || undefined, limit: 100, department: v === "queue" ? "execution" : undefined } })
       .then((r) => setContracts(r.data.data))
       .catch(console.error)
       .finally(() => setIsLoading(false));
@@ -50,21 +44,12 @@ export function ExecutionPage() {
 
   useEffect(() => { load(); loadSummary(); }, []);
 
-  async function changeStatus(contractId: string, status: string) {
-    setUpdatingId(contractId);
-    try {
-      const res = await api.patch(`/api/contracts/${contractId}/status`, { status });
-      setContracts((prev) => prev.map((c) => c.id === contractId ? res.data : c));
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setUpdatingId(null);
-    }
-  }
+  const replace = (updated: any) => setContracts((prev) => prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)));
+  const changeView = (v: "queue" | "all") => { setView(v); load(v); };
 
   return (
     <div className="flex flex-col">
-      <PageHeader title="Execução" description="Controle de status e execução dos contratos" />
+      <PageHeader title="Execução" description="Analisa o contrato vindo de Contratos, envia ao cliente e acompanha o embarque" />
 
       <div className="flex-1 space-y-4 p-6">
         <div className="flex items-center gap-3">
@@ -72,32 +57,34 @@ export function ExecutionPage() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input placeholder="Buscar contrato..." value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && load()} className="pl-9" />
           </div>
-          <Button variant="outline" onClick={load}><RefreshCw className="mr-2 h-4 w-4" />Atualizar</Button>
+          <Button variant="outline" onClick={() => load()}><RefreshCw className="mr-2 h-4 w-4" />Atualizar</Button>
+          <div className="ml-auto flex rounded-md border p-0.5" role="group" aria-label="Contratos exibidos">
+            <Button size="sm" variant={view === "queue" ? "default" : "ghost"} aria-pressed={view === "queue"} onClick={() => changeView("queue")}>Fila da Execução</Button>
+            <Button size="sm" variant={view === "all" ? "default" : "ghost"} aria-pressed={view === "all"} onClick={() => changeView("all")}>Todos</Button>
+          </div>
         </div>
 
-        {/* KPI cards */}
-        <div className="grid gap-4 sm:grid-cols-4">
-          {STATUS_OPTIONS.map((s) => {
-            const count = contracts.filter((c) => c.status?.status_current === s).length;
-            return (
-              <Card key={s}>
+        {/* Quanto há em cada posto da Execução */}
+        {view === "queue" && (
+          <div className="grid gap-4 sm:grid-cols-3">
+            {QUEUE_STAGES.map((stage) => (
+              <Card key={stage} className="border-l-4" style={{ borderLeftColor: DEPARTMENTS.execution.color }}>
                 <CardContent className="pt-4 pb-4">
-                  <p className="text-xs font-medium text-muted-foreground">{s}</p>
-                  <p className="mt-1 text-2xl font-bold">{count}</p>
+                  <p className="text-xs font-medium text-muted-foreground">{stage}</p>
+                  <p className="mt-1 text-2xl font-bold">{contracts.filter((c) => stageOf(c) === stage).length}</p>
                 </CardContent>
               </Card>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
 
         <Card>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Status Atual</TableHead>
-                  <TableHead>Alterar Status</TableHead>
-                  <TableHead>Cobrança</TableHead>
+                  <TableHead>Etapa</TableHead>
+                  <TableHead>Próximo passo</TableHead>
                   <TableHead>Nº Contrato</TableHead>
                   <TableHead>Produto / Safra</TableHead>
                   <TableHead>Quantidade</TableHead>
@@ -110,38 +97,27 @@ export function ExecutionPage() {
               <TableBody>
                 {isLoading ? (
                   [...Array(5)].map((_, i) => (
-                    <TableRow key={i}>{[...Array(10)].map((_, j) => <TableCell key={j}><div className="h-4 animate-pulse rounded bg-muted" /></TableCell>)}</TableRow>
+                    <TableRow key={i}>{[...Array(9)].map((_, j) => <TableCell key={j}><div className="h-4 animate-pulse rounded bg-muted" /></TableCell>)}</TableRow>
                   ))
                 ) : contracts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="h-32 text-center">
+                    <TableCell colSpan={9} className="h-32 text-center">
                       <Truck className="mx-auto h-8 w-8 text-muted-foreground" />
-                      <p className="mt-2 text-muted-foreground">Nenhum contrato encontrado</p>
+                      <p className="mt-2 text-muted-foreground">{view === "queue" ? "Nenhum contrato aguardando a Execução" : "Nenhum contrato encontrado"}</p>
                     </TableCell>
                   </TableRow>
                 ) : (
                   contracts.map((c) => (
                     <TableRow key={c.id}>
+                      <TableCell><ContractStageBadge contract={c} /></TableCell>
                       <TableCell>
-                        <Badge variant={statusVariant[c.status?.status_current] ?? "outline"}>
-                          {c.status?.status_current ?? "—"}
-                        </Badge>
+                        <div className="flex flex-nowrap items-center gap-1.5">
+                          {stageOf(c) === "Aguardando Envio" && canSend && (
+                            <Button type="button" size="sm" className={ROW_BUTTON} onClick={() => setEmailContract(c)}>Enviar ao cliente</Button>
+                          )}
+                          <ContractWorkflowActions compact contract={c} only={["approve", "return", "ship_done"]} onChanged={replace} />
+                        </div>
                       </TableCell>
-                      <TableCell>
-                        <Select
-                          disabled={updatingId === c.id}
-                          value={c.status?.status_current}
-                          onValueChange={(val) => changeStatus(c.id, val)}
-                        >
-                          <SelectTrigger className="h-8 w-36 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {STATUS_OPTIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell><BillingStatusBadge status={c.billing_status} /></TableCell>
                       <TableCell className="font-medium"><button type="button" className="text-left underline-offset-2 hover:underline" title="Ver envios" onClick={() => setEmailContract(c)}>{c.number_contract}</button></TableCell>
                       <TableCell>{c.name_product}<br /><span className="text-xs text-muted-foreground">{c.crop}</span></TableCell>
                       <TableCell>
@@ -165,20 +141,27 @@ export function ExecutionPage() {
                         </button>
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link to={`/contracts/${c.id}`}><Eye className="h-4 w-4" /></Link>
-                        </Button>
-                        {c.price_type === "to_fix" && (
-                          <Button variant="ghost" size="icon" title="Fixações de preço" onClick={() => setFixContract(c)}>
-                            <Scale className="h-4 w-4" />
+                        {/* Posições fixas: o ícone de fixação reserva o lugar mesmo quando não se aplica. */}
+                        <div className="flex flex-nowrap items-center">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" title="Abrir contrato" asChild>
+                            <Link to={`/contracts/${c.id}`}><Eye className="h-4 w-4" /></Link>
                           </Button>
-                        )}
-                        <ContractPdfButton contractId={c.id} />
-                        {canSend && (
-                          <Button variant="ghost" size="icon" title="Enviar contrato por e-mail" onClick={() => setEmailContract(c)}>
-                            <Mail className="h-4 w-4" />
-                          </Button>
-                        )}
+                          {c.price_type === "to_fix" ? (
+                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Fixações de preço" onClick={() => setFixContract(c)}>
+                              <Scale className="h-4 w-4" />
+                            </Button>
+                          ) : <span className="h-8 w-8" aria-hidden="true" />}
+                          <ContractPdfButton contractId={c.id} />
+                          {canSend && (
+                            <Button
+                              variant="ghost" size="icon" className="h-8 w-8"
+                              title={SENDABLE_STAGES.includes(stageOf(c) ?? "") ? "Enviar contrato por e-mail" : "Envios do contrato (o envio libera após a aprovação da Execução)"}
+                              onClick={() => setEmailContract(c)}
+                            >
+                              <Mail className={cn("h-4 w-4", !SENDABLE_STAGES.includes(stageOf(c) ?? "") && "opacity-40")} />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -189,8 +172,8 @@ export function ExecutionPage() {
         </Card>
       </div>
 
-      <ContractFixationsDialog contract={fixContract} onClose={() => setFixContract(null)} onChanged={load} />
-      <ContractEmailDialog contract={emailContract} canSend={canSend} onClose={() => setEmailContract(null)} onSent={loadSummary}
+      <ContractFixationsDialog contract={fixContract} onClose={() => setFixContract(null)} onChanged={() => load()} />
+      <ContractEmailDialog contract={emailContract} canSend={canSend && SENDABLE_STAGES.includes(stageOf(emailContract) ?? "")} onClose={() => setEmailContract(null)} onSent={() => { loadSummary(); load(); }}
         onRecipients={(contractId, lists) => setContracts((prev) => prev.map((c) => (c.id === contractId ? { ...c, ...lists } : c)))} />
     </div>
   );

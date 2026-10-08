@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
+import { WorkflowSettings } from "./WorkflowSettings";
 
 const adminModules = [
   {
@@ -86,7 +87,8 @@ export function AdminPage() {
         title="Administração"
         description="Configurações gerais da corretora"
       />
-      <div className="p-6">
+      <div className="space-y-6 p-6">
+        <WorkflowSettings />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {adminModules.map((m) => (
             <Link key={m.path} to={m.path}>

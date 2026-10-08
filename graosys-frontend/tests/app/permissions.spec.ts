@@ -66,7 +66,7 @@ test.describe("Permissões (usuário comum)", () => {
       await expect(userPage).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
       await userPage.goto("/contracts");
       await expect(userPage.getByRole("heading", { name: "Contratos" })).toBeVisible();
-      await expect(userPage.getByText(/contratos cadastrados/)).toBeVisible();
+      await expect(userPage.getByText(/com Contratos: em elaboração/)).toBeVisible(); // fila carregada
     } finally {
       await ctx.close();
       await admin.delete(`/api/users/${user.id}`);
