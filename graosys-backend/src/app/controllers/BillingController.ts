@@ -32,18 +32,19 @@ export class BillingController {
 
   async getAll(req: Request, res: Response) {
     const { year, status, page = "1", limit = "50" } = req.query;
-    const billingRepo = AppDataSource.getRepository(Billing);
+    const qb = AppDataSource.getRepository(Billing).createQueryBuilder("b")
+      .where("b.tenant_id = :tenant_id", { tenant_id: req.user.tenant_id });
+    if (year) qb.andWhere("b.year = :year", { year });
+    if (status) qb.andWhere("b.status = :status", { status });
 
-    const where: any = { tenant_id: req.user.tenant_id };
-    if (year) where.year = year;
-    if (status) where.status = status;
-
-    const [billings, total] = await billingRepo.findAndCount({
-      where,
-      order: { receipt_date: "DESC" },
-      skip: (Number(page) - 1) * Number(limit),
-      take: Number(limit),
-    });
+    // Sem data de recebimento (nulo ou vazio) primeiro, depois a mais recente; no empate, o lançamento mais novo.
+    const [billings, total] = await qb
+      .addSelect("NULLIF(b.receipt_date, '')", "receipt_sort")
+      .orderBy("receipt_sort", "DESC", "NULLS FIRST")
+      .addOrderBy("b.created_at", "DESC")
+      .skip((Number(page) - 1) * Number(limit))
+      .take(Number(limit))
+      .getManyAndCount();
 
     return res.json({ data: billings, total, page: Number(page), limit: Number(limit) });
   }

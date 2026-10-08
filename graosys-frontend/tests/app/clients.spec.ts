@@ -15,6 +15,7 @@ test.describe("Clientes", () => {
 
     await expect(page).toHaveURL(/\/clients$/);
     await page.getByPlaceholder("Buscar por nome...").fill(name);
+    await page.getByPlaceholder("Buscar por nome...").press("Enter"); // a lista mostra só os 50 primeiros
     const row = page.getByRole("row", { name: new RegExp(name) });
     await expect(row).toBeVisible();
 
