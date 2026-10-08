@@ -54,6 +54,8 @@ export function AdminPdfLayoutPage() {
   const [saving, setSaving] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [company, setCompany] = useState<Record<string, string>>({});
+  // Campos do endereço só liberam depois de carregados: senão o valor que chega da API apaga o que foi digitado.
+  const [companyLoaded, setCompanyLoaded] = useState(false);
   const [companyMessage, setCompanyMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
   const [savingCompany, setSavingCompany] = useState(false);
 
@@ -68,7 +70,7 @@ export function AdminPdfLayoutPage() {
       const next: Record<string, string> = {};
       for (const k of COMPANY_FIELDS) next[k] = r.data?.[k] ?? "";
       setCompany(next);
-    }).catch(console.error);
+    }).catch(console.error).finally(() => setCompanyLoaded(true));
   }, []);
 
   async function saveCompany() {
@@ -83,7 +85,7 @@ export function AdminPdfLayoutPage() {
   const companyField = (k: (typeof COMPANY_FIELDS)[number], label: string, className = "", extra: Record<string, unknown> = {}) => (
     <div className={`space-y-2 ${className}`}>
       <Label htmlFor={`company-${k}`}>{label}</Label>
-      <Input id={`company-${k}`} value={company[k] ?? ""} onChange={(e) => setCompany({ ...company, [k]: e.target.value })} {...extra} />
+      <Input id={`company-${k}`} disabled={!companyLoaded} value={company[k] ?? ""} onChange={(e) => setCompany({ ...company, [k]: e.target.value })} {...extra} />
     </div>
   );
 
@@ -172,7 +174,7 @@ export function AdminPdfLayoutPage() {
             {companyField("state", "UF", "", { maxLength: 2 })}
           </div>
           {companyMessage && <p className={companyMessage.type === "ok" ? "text-sm text-green-700" : "text-sm text-destructive"}>{companyMessage.text}</p>}
-          <Button onClick={saveCompany} disabled={savingCompany}>Salvar endereço</Button>
+          <Button onClick={saveCompany} disabled={savingCompany || !companyLoaded}>Salvar endereço</Button>
         </CardContent></Card>
       </div>
     </div>
