@@ -118,7 +118,10 @@ export function ExecutionPage() {
                           <ContractWorkflowActions compact contract={c} only={["approve", "return", "ship_done"]} onChanged={replace} />
                         </div>
                       </TableCell>
-                      <TableCell className="font-medium"><button type="button" className="text-left underline-offset-2 hover:underline" title="Ver envios" onClick={() => setEmailContract(c)}>{c.number_contract}</button></TableCell>
+                      <TableCell className="font-medium">
+                        <button type="button" className="text-left underline-offset-2 hover:underline" title="Ver envios" onClick={() => setEmailContract(c)}>{c.number_contract}</button>
+                        {c.track_shipment && <p className="text-xs font-normal text-amber-700" title="Acompanha o embarque antes da Cobrança">Pós-venda</p>}
+                      </TableCell>
                       <TableCell>{c.name_product}<br /><span className="text-xs text-muted-foreground">{c.crop}</span></TableCell>
                       <TableCell>
                         {c.quantity} {c.type_quantity}

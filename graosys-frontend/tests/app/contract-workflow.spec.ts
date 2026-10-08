@@ -145,6 +145,27 @@ test.describe("Fluxo do contrato nas telas", () => {
     await expect(timeline).toContainText("Negócio desfeito");
   });
 
+  test("pós-venda: a marcação fica no contrato e aparece na fila da Execução", async ({ page }) => {
+    const number = `FLX-${uid()}`;
+    const api = await adminApi();
+    const contract = await post(api, "/api/contracts", contractPayload(number));
+    expect(contract.track_shipment).toBe(false);
+
+    await page.goto(`/contracts/${contract.id}`);
+    const track = page.getByLabel("Acompanhar embarque (pós-venda)");
+    await expect(track).not.toBeChecked();
+    await track.check();
+    await page.getByRole("button", { name: "Salvar Alterações" }).click();
+    await expect(page).toHaveURL(/\/contracts$/);
+    expect((await (await api.get(`/api/contracts/${contract.id}`)).json()).track_shipment).toBe(true);
+
+    await post(api, `/api/contracts/${contract.id}/workflow`, { action: "submit" });
+    await page.goto("/execution");
+    await page.getByPlaceholder("Buscar contrato...").fill(number);
+    await page.getByPlaceholder("Buscar contrato...").press("Enter");
+    await expect(page.getByRole("row", { name: new RegExp(number) })).toContainText("Pós-venda");
+  });
+
   test("novo contrato: registrar e enviar para a Execução; no fluxo simplificado o botão some", async ({ page }) => {
     test.setTimeout(40_000);
     const id = uid();

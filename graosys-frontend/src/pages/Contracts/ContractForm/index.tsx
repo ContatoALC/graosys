@@ -46,6 +46,7 @@ interface ContractForm {
   type_commission_buyer: string;
   commission_buyer: string;
   type_pickup: string;
+  track_shipment: boolean;
   pickup: string;
   pickup_location: string;
   destination: string;
@@ -88,6 +89,7 @@ export function ContractFormPage() {
     defaultValues: {
       type_quantity: "sc",
       type_currency: "BRL",
+      track_shipment: false,
       price_type: "fixed",
       fixation_mode: "frame",
       seller: [{ value: "", client_id: null }],
@@ -566,6 +568,18 @@ export function ContractFormPage() {
               <div className="space-y-2">
                 <Label>Inspeção</Label>
                 <Input {...register("inspection")} />
+              </div>
+              <div className="space-y-1 rounded-md border bg-muted/30 p-3">
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input type="checkbox" {...register("track_shipment")} className="h-4 w-4" />
+                  Acompanhar embarque (pós-venda)
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  Depois do envio ao cliente, o contrato fica na Execução ("Em Embarque") até o embarque ser concluído, e só então vai para a Cobrança.
+                </p>
+                {watch("type_currency") === "USD" && !watch("track_shipment") && (
+                  <p className="text-xs text-amber-700">Contrato em dólar costuma ser exportação por navio: considere acompanhar o embarque.</p>
+                )}
               </div>
             </CardContent>
           </Card>
