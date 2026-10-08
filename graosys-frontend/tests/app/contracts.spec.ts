@@ -30,18 +30,18 @@ test.describe("Contratos", () => {
     // Broker
     await page.goto("/admin/brokers");
     await page.getByRole("button", { name: "Novo Broker" }).click();
+    await page.getByRole("dialog").getByLabel("Código").fill(`B${suffix}`);
     await page.getByRole("dialog").locator('input[name="name"]').fill(brokerName);
     await page.getByRole("dialog").getByRole("button", { name: "Criar" }).click();
     await expect(page.getByRole("row", { name: new RegExp(brokerName) })).toBeVisible();
 
     // Contrato
     await page.goto("/contracts/new");
-    await page.locator('input[name="number_broker"]').fill(`B-${suffix}`);
+    // Nº Corretor/Broker: lista dos brokers cadastrados; o escolhido entra sozinho no quadro de comissão
+    await page.getByLabel("Nº Corretor/Broker *").selectOption({ label: `B${suffix} · ${brokerName}` });
+    await expect(page.locator('select[name="brokers.0.broker_id"] option:checked')).toHaveText(`B${suffix} · ${brokerName}`);
+    await expect(page.locator('input[name="brokers.0.commission_percent"]')).toHaveCount(0);
     await page.locator('input[name="number_contract"]').fill(number);
-
-    await page.getByRole("button", { name: "Adicionar broker" }).click();
-    await page.locator('select[name="brokers.0.broker_id"]').selectOption({ label: brokerName });
-    await page.locator('input[name="brokers.0.commission_percent"]').fill("10");
 
     await page.getByPlaceholder("Buscar ou digitar o vendedor").fill(client);
     await page.getByRole("button", { name: new RegExp(client) }).click();
@@ -69,8 +69,8 @@ test.describe("Contratos", () => {
     await expect(page.getByRole("heading", { name: "Editar Contrato" })).toBeVisible();
     await expect(page.locator('input[name="number_contract"]')).toHaveValue(number);
     await expect(page.getByRole("combobox").filter({ hasText: productName })).toBeVisible();
-    await expect(page.locator('select[name="brokers.0.broker_id"] option:checked')).toHaveText(brokerName);
-    await expect(page.locator('input[name="brokers.0.commission_percent"]')).toHaveValue("10");
+    await expect(page.getByLabel("Nº Corretor/Broker *")).toHaveValue(`B${suffix}`);
+    await expect(page.locator('select[name="brokers.0.broker_id"] option:checked')).toHaveText(`B${suffix} · ${brokerName}`);
 
     // Edição persiste
     await page.locator('input[name="quantity"]').fill("1500");
@@ -87,7 +87,8 @@ test.describe("Contratos", () => {
     await page.goto("/contracts/new");
     await page.getByRole("button", { name: "Registrar Contrato" }).click();
     await expect(page).toHaveURL(/\/contracts\/new$/);
-    for (const name of ["number_broker", "number_contract", "crop", "quantity", "price"]) {
+    await expect(page.locator('select[name="number_broker"]')).toHaveClass(/border-destructive/);
+    for (const name of ["number_contract", "crop", "quantity", "price"]) {
       await expect(page.locator(`input[name="${name}"]`)).toHaveClass(/border-destructive/);
     }
     await expect(page.getByRole("combobox").filter({ hasText: "Selecione o produto" })).toHaveClass(/border-destructive/);

@@ -173,8 +173,9 @@ test.describe("Fluxo do contrato nas telas", () => {
     const api = await adminApi();
     await post(api, "/api/products", { product_type: `FLX${id}`, name: `Produto FLX ${id}` });
 
+    await post(api, "/api/brokers", { name: `Broker ${id}`, code: `B${id}` });
     await page.goto("/contracts/new");
-    await page.locator('input[name="number_broker"]').fill(`B-${id}`);
+    await page.getByLabel("Nº Corretor/Broker *").selectOption({ label: `B${id} · Broker ${id}` });
     await page.locator('input[name="number_contract"]').fill(number);
     await page.getByPlaceholder("Buscar ou digitar o vendedor").fill("Vendedor Fluxo");
     await page.getByPlaceholder("Buscar ou digitar o comprador").fill("Comprador Fluxo");

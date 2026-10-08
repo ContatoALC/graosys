@@ -12,6 +12,10 @@ export class Broker {
   @Column()
   name: string;
 
+  // Código do broker na corretora (ex.: "007"); é o que vai no "Nº Corretor/Broker" do contrato.
+  @Column({ nullable: true })
+  code: string | null;
+
   @Column({ nullable: true })
   cnpj_cpf: string;
 

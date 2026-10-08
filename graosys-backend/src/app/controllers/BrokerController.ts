@@ -7,11 +7,21 @@ import { ContractBroker } from "../entities/ContractBroker";
 import { BrokerCommissionRate } from "../entities/BrokerCommissionRate";
 import { currentRates } from "../../services/contractBrokers";
 
-const BROKER_ALLOWED_FIELDS: (keyof Broker)[] = ["name", "cnpj_cpf", "email", "phone", "active", "user_id"];
+const BROKER_ALLOWED_FIELDS: (keyof Broker)[] = ["name", "code", "cnpj_cpf", "email", "phone", "active", "user_id"];
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-// Valida o vínculo com usuário; devolve mensagem de erro ou null.
+// Valida o código (único na corretora) e o vínculo com usuário; devolve mensagem de erro ou null.
 async function validateLinks(req: Request, data: Partial<Broker>, brokerId?: string): Promise<string | null> {
+  if (data.code !== undefined) {
+    data.code = String(data.code ?? "").trim().slice(0, 30) || null;
+    if (data.code) {
+      const [taken] = await AppDataSource.query(
+        `SELECT name FROM brokers WHERE tenant_id = $1 AND lower(code) = lower($2) AND id <> $3 LIMIT 1`,
+        [req.user.tenant_id, data.code, brokerId ?? ""]
+      );
+      if (taken) return `O código ${data.code} já é do broker ${taken.name}`;
+    }
+  }
   if (data.user_id !== undefined) {
     data.user_id = data.user_id || null;
     if (data.user_id) {

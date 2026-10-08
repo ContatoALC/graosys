@@ -25,8 +25,9 @@ test.describe("Dados para templates de contrato", () => {
     await expect(page).toHaveURL(/\/clients$/);
 
     // Contrato: vendedor escolhido da lista, comprador digitado
+    await post(api, "/api/brokers", { name: `Broker ${id}`, code: `B${id}` });
     await page.goto("/contracts/new");
-    await page.locator('input[name="number_broker"]').fill(`B-${id}`);
+    await page.getByLabel("Nº Corretor/Broker *").selectOption({ label: `B${id} · Broker ${id}` });
     await page.locator('input[name="number_contract"]').fill(number);
     const account = page.getByLabel("Conta para pagamento");
     await expect(account).toBeDisabled();

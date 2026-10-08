@@ -16,6 +16,7 @@ Sem backend dá para rodar só `npm run test:public`.
 | `app/routes.spec.ts` | Todas as telas abrem logado, sem erro JS e sem 5xx da API. |
 | `app/clients.spec.ts`, `app/platform.spec.ts` | Fluxos (cadastro/edição de cliente, detalhe de corretora). |
 | `app/contracts.spec.ts` | Cliente + produto + broker → contrato → edição em `/contracts/:id`; campos obrigatórios. |
+| `app/contract-broker.spec.ts` | Nº Corretor/Broker: lista de brokers pelo código, broker logado vem preenchido no contrato novo, trocar o broker troca no quadro de comissão, código único. Nos specs, escolha o broker com `selectOption({ label: "CÓDIGO · Nome" })`. |
 | `app/contract-template-data.spec.ts` | Dados dos templates de contrato: parte vinculada ao cadastro, conta de pagamento, fixações numeradas (F01…) com memória de cálculo (fator, fobbings, PPE) e endereço da corretora. |
 | `app/contract-email.spec.ts` | Envio do contrato: grupos de e-mail de vendedor e comprador digitados na tela de envio, validação e gravação no contrato; e-mails do cadastro do cliente entram no contrato e são sugeridos no envio. |
 | `app/contract-pdf.spec.ts` | PDF do contrato pela linha de Contratos e de Execução (via do vendedor/comprador em nova aba); a API só serve contratos da própria corretora. |

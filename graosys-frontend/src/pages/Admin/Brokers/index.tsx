@@ -13,7 +13,7 @@ import { api } from "@/services/api";
 import { formatDate } from "@/lib/utils";
 import { useForm } from "react-hook-form";
 
-interface BrokerForm { name: string; cnpj_cpf: string; email: string; phone: string; active: boolean; user_id: string; }
+interface BrokerForm { name: string; code: string; cnpj_cpf: string; email: string; phone: string; active: boolean; user_id: string; }
 
 const selectClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const pct = (v: number | null | undefined) => (v === null || v === undefined ? "—" : `${v.toLocaleString("pt-BR", { maximumFractionDigits: 4 })}%`);
@@ -93,8 +93,8 @@ export function AdminBrokersPage() {
   function load() { api.get("/api/brokers").then((r) => setBrokers(r.data)).catch(console.error); }
   useEffect(() => { load(); api.get("/api/users").then((r) => setUsers(r.data)).catch(console.error); }, []);
 
-  function openNew() { reset({ name: "", cnpj_cpf: "", email: "", phone: "", active: true, user_id: "" }); setEditingId(null); setShowDialog(true); }
-  function openEdit(b: any) { reset({ name: b.name, cnpj_cpf: b.cnpj_cpf ?? "", email: b.email ?? "", phone: b.phone ?? "", active: b.active, user_id: b.user_id ?? "" }); setEditingId(b.id); setShowDialog(true); }
+  function openNew() { reset({ name: "", code: "", cnpj_cpf: "", email: "", phone: "", active: true, user_id: "" }); setEditingId(null); setShowDialog(true); }
+  function openEdit(b: any) { reset({ name: b.name, code: b.code ?? "", cnpj_cpf: b.cnpj_cpf ?? "", email: b.email ?? "", phone: b.phone ?? "", active: b.active, user_id: b.user_id ?? "" }); setEditingId(b.id); setShowDialog(true); }
 
   async function onSubmit(data: BrokerForm) {
     try {
@@ -121,6 +121,7 @@ export function AdminBrokersPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Status</TableHead>
+                <TableHead>Código</TableHead>
                 <TableHead>Nome</TableHead>
                 <TableHead>Usuário (login)</TableHead>
                 <TableHead className="text-right">% atual</TableHead>
@@ -132,10 +133,11 @@ export function AdminBrokersPage() {
             </TableHeader>
             <TableBody>
               {brokers.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="h-24 text-center"><Handshake className="mx-auto h-6 w-6 text-muted-foreground" /><p className="text-muted-foreground">Nenhum broker</p></TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="h-24 text-center"><Handshake className="mx-auto h-6 w-6 text-muted-foreground" /><p className="text-muted-foreground">Nenhum broker</p></TableCell></TableRow>
               ) : brokers.map((b) => (
                 <TableRow key={b.id}>
                   <TableCell><Badge variant={b.active ? "default" : "secondary"}>{b.active ? "Ativo" : "Inativo"}</Badge></TableCell>
+                  <TableCell>{b.code ?? <span className="text-muted-foreground">—</span>}</TableCell>
                   <TableCell className="font-medium">{b.name}</TableCell>
                   <TableCell className="text-sm">{userName(b.user_id) ?? <span className="text-muted-foreground">Sem acesso</span>}</TableCell>
                   <TableCell className="text-right font-medium">{pct(b.current_percent)}</TableCell>
@@ -159,7 +161,11 @@ export function AdminBrokersPage() {
         <DialogContent>
           <DialogHeader><DialogTitle>{editingId ? "Editar Broker" : "Novo Broker"}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2"><Label>Nome *</Label><Input {...register("name", { required: true })} /></div>
+            <div className="grid grid-cols-[120px_1fr] gap-3">
+              <div className="space-y-2"><Label htmlFor="broker-code">Código</Label><Input id="broker-code" placeholder="ex.: 007" {...register("code")} /></div>
+              <div className="space-y-2"><Label>Nome *</Label><Input {...register("name", { required: true })} /></div>
+            </div>
+            <p className="text-xs text-muted-foreground">O código é o que vai no "Nº Corretor/Broker" dos contratos. Sem código, vai o nome.</p>
             <div className="space-y-2">
               <Label>Usuário (login)</Label>
               <select key={users.length} className={selectClass} {...register("user_id")}>

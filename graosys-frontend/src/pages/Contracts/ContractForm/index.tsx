@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { ClientPicker, type BankAccount, type ClientOption } from "@/components/ClientPicker";
 import { PriceModeSection } from "./PriceModeSection";
 import { ContractStageBadge } from "@/components/ContractStageBadge";
@@ -65,10 +66,13 @@ interface ContractForm {
   brokers: { broker_id: string; commission_percent: string }[];
 }
 
+// O "Nº Corretor/Broker" do contrato é o código do broker (ou o nome, se ele não tiver código).
+const brokerNumber = (b: { code?: string | null; name: string }) => (b.code || b.name || "").trim();
+const brokerLabel = (b: { code?: string | null; name: string }) => (b.code ? `${b.code} · ${b.name}` : `${b.name} (sem código)`);
+
 const selectClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const accountKey = (a?: BankAccount | null) => (a ? [a.bank, a.agency, a.account, a.pix].map((v) => v || "").join("|") : "");
 const accountLabel = (a: BankAccount) => [a.bank, a.agency && `Ag. ${a.agency}`, a.account && `C/C ${a.account}`, a.pix && `Pix ${a.pix}`].filter(Boolean).join(" · ");
-const pctLabel = (v: number | null | undefined) => (v === null || v === undefined ? "sem tabela" : `${v.toLocaleString("pt-BR", { maximumFractionDigits: 4 })}%`);
 
 export function ContractFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -82,6 +86,9 @@ export function ContractFormPage() {
   // Fluxo simplificado: o contrato já nasce pronto para envio, sem passar pela análise.
   const [simpleFlow, setSimpleFlow] = useState(false);
   const sendAfterSave = useRef(false);
+  const { user } = useAuth();
+  // Último broker escolhido no "Nº Corretor/Broker": trocar a escolha troca o broker no quadro de comissão.
+  const lastNumber = useRef("");
   // Contas bancárias dos clientes vinculados (por id), para oferecer como conta de pagamento.
   const [clientAccounts, setClientAccounts] = useState<Record<string, BankAccount[]>>({});
   const rememberClient = (c: ClientOption | null) => { if (c) setClientAccounts((m) => ({ ...m, [c.id]: c.account || [] })); };
@@ -144,12 +151,40 @@ export function ContractFormPage() {
           frame_exchange: d.frame_exchange === null || d.frame_exchange === undefined ? "" : String(Number(d.frame_exchange)),
         });
         setSaved(d);
+        lastNumber.current = d.number_broker ?? "";
         for (const clientId of (d.seller_ids || []).filter(Boolean)) {
           api.get(`/api/clients/${clientId}`).then((c) => rememberClient(c.data)).catch(() => undefined);
         }
       }).catch(console.error);
     }
   }, [id]);
+
+  // Contrato novo de um usuário que é broker: já vem com ele no "Nº Corretor/Broker" e no quadro de comissão.
+  useEffect(() => {
+    if (isEditing || !user || getValues("number_broker")) return;
+    const mine = brokerList.find((b) => b.user_id === user.id && b.active);
+    if (!mine) return;
+    setValue("number_broker", brokerNumber(mine));
+    if (getValues("brokers").length === 0) setValue("brokers", [{ broker_id: mine.id, commission_percent: "" }]);
+    lastNumber.current = brokerNumber(mine);
+  }, [brokerList, user, isEditing]);
+
+  function handleBrokerNumber(value: string) {
+    const findBy = (n: string) => (n ? brokerList.find((b) => brokerNumber(b) === n) : undefined);
+    const next = findBy(value);
+    const previous = findBy(lastNumber.current);
+    lastNumber.current = value;
+    if (!next) return;
+    const list = getValues("brokers");
+    if (list.some((b) => b.broker_id === next.id)) {
+      if (previous) setValue("brokers", list.filter((b) => b.broker_id !== previous.id || previous.id === next.id));
+      return;
+    }
+    const at = previous ? list.findIndex((b) => b.broker_id === previous.id) : -1;
+    setValue("brokers", at >= 0
+      ? list.map((b, i) => (i === at ? { broker_id: next.id, commission_percent: "" } : b))
+      : [...list, { broker_id: next.id, commission_percent: "" }]);
+  }
 
   function handleProductChange(productType: string) {
     const p = products.find((p) => p.product_type === productType);
@@ -252,8 +287,21 @@ export function ContractFormPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Nº Corretor/Broker *</Label>
-                  <Input {...register("number_broker", { required: true })} className={errors.number_broker ? "border-destructive" : ""} />
+                  <Label htmlFor="number_broker">Nº Corretor/Broker *</Label>
+                  <select
+                    id="number_broker"
+                    key={brokerList.length}
+                    className={`${selectClass} ${errors.number_broker ? "border-destructive" : ""}`}
+                    {...register("number_broker", { required: true, onChange: (e) => handleBrokerNumber(e.target.value) })}
+                  >
+                    <option value="">Selecione o broker</option>
+                    {brokerList.filter((b) => b.active || brokerNumber(b) === watch("number_broker")).map((b) => (
+                      <option key={b.id} value={brokerNumber(b)}>{brokerLabel(b)}</option>
+                    ))}
+                    {watch("number_broker") && !brokerList.some((b) => brokerNumber(b) === watch("number_broker")) && (
+                      <option value={watch("number_broker")}>{watch("number_broker")} (sem cadastro)</option>
+                    )}
+                  </select>
                 </div>
                 <div className="space-y-2">
                   <Label>Nº Contrato *</Label>
@@ -280,24 +328,23 @@ export function ContractFormPage() {
               {contractBrokers.fields.length === 0 && <p className="text-sm text-muted-foreground">Nenhum broker neste contrato.</p>}
               {contractBrokers.fields.map((field, i) => {
                 const chosen = brokerList.find((b) => b.id === watch(`brokers.${i}.broker_id`));
-                const tablePct = saved?.brokers?.find((b: any) => b.broker_id === chosen?.id)?.table_percent ?? chosen?.current_percent;
                 return (
-                  <div key={field.id} className="grid grid-cols-[1fr_180px_auto] items-start gap-2">
-                    <select key={brokerList.length} className={selectClass} {...register(`brokers.${i}.broker_id`, { required: true })}>
+                  <div key={field.id} className="flex items-center gap-2">
+                    <select key={brokerList.length} className={`${selectClass} flex-1`} {...register(`brokers.${i}.broker_id`, { required: true })}>
                       <option value="">Selecione o broker</option>
-                      {brokerList.filter((b) => b.active || b.id === chosen?.id).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                      {brokerList.filter((b) => b.active || b.id === chosen?.id).map((b) => <option key={b.id} value={b.id}>{brokerLabel(b)}</option>)}
                     </select>
-                    <div>
-                      <Input type="number" step="0.0001" min="0" max="100" placeholder={chosen ? `Tabela: ${pctLabel(tablePct)}` : "% da comissão"} {...register(`brokers.${i}.commission_percent`)} />
-                    </div>
-                    <Button type="button" variant="ghost" size="icon" onClick={() => contractBrokers.remove(i)}><X className="h-4 w-4" /></Button>
+                    {/* O % vem da tabela de comissão do broker; um % antigo gravado no contrato segue no payload, sem aparecer. */}
+                    <Button type="button" variant="ghost" size="icon" className="shrink-0" title="Remover broker" onClick={() => contractBrokers.remove(i)}><X className="h-4 w-4" /></Button>
                   </div>
                 );
               })}
               <Button type="button" variant="outline" size="sm" onClick={() => contractBrokers.append({ broker_id: "", commission_percent: "" })}>
                 <Plus className="mr-1 h-3 w-3" />Adicionar broker
               </Button>
-              <p className="text-xs text-muted-foreground">% sobre a comissão da corretora neste contrato. Em branco, vale a tabela de comissão do broker na data de emissão.</p>
+              {(user?.role === "admin" || user?.role === "superadmin") && (
+                <p className="text-xs text-muted-foreground">Cada broker recebe o % da tabela de comissão dele (Admin → Corretores/Brokers) na data de emissão, sobre a comissão da corretora.</p>
+              )}
             </CardContent>
           </Card>
 
