@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { AppDataSource } from "../../database/data-source";
 import { GrainContract } from "../entities/GrainContract";
-import { ILike } from "typeorm";
 import { pickFields } from "../../utils/pickFields";
 import { nextContractNumber } from "../../utils/contractNumber";
 import { applyTotals } from "../../services/contractTotals";
@@ -12,6 +11,7 @@ import { ContractBroker } from "../entities/ContractBroker";
 import { linkContractParties, normalizePaymentAccount } from "../../services/contractParties";
 import { contractPdfFilename, generateContractPdf, getPdfFixations, getPdfSettings } from "../../services/contractPdf";
 import { Tenant } from "../entities/Tenant";
+import { STAGES, applyAction, startWorkflow, stagesOf } from "../../services/contractWorkflow";
 
 const ALLOWED_FIELDS: (keyof GrainContract)[] = [
   "number_broker", "number_contract", "seller", "buyer", "seller_ids", "buyer_ids", "list_email_seller", "list_email_buyer",
@@ -19,7 +19,7 @@ const ALLOWED_FIELDS: (keyof GrainContract)[] = [
   "quantity_bag", "type_currency", "price", "type_icms", "icms", "payment", "payment_account",
   "type_commission_seller", "commission_seller", "type_commission_buyer", "commission_buyer",
   "type_pickup", "pickup", "pickup_location", "inspection", "observation",
-  "internal_communication", "destination", "complement_destination",
+  "internal_communication", "destination", "complement_destination", "track_shipment",
   "number_external_contract_buyer", "number_external_contract_seller", "day_exchange_rate",
   "payment_date", "initial_pickup_date", "final_pickup_date", "contract_emission_date",
   "owner_contract", "total_contract_value", "commission_contract",
@@ -63,14 +63,9 @@ export class GrainContractController {
     if (pricingError) return res.status(400).json({ error: pricingError });
     const brokersError = await validateContractBrokers(req.user.tenant_id, req.body.brokers, input.contract_emission_date);
     if (brokersError) return res.status(400).json({ error: brokersError });
-    const contract = contractRepo.create({
-      ...input,
-      tenant_id: req.user.tenant_id,
-      status: {
-        status_current: "Ativo",
-        history: [{ date: new Date().toLocaleDateString("pt-BR"), time: new Date().toLocaleTimeString("pt-BR"), status: "Ativo", owner_change: req.user.name }],
-      },
-    });
+    const contract = contractRepo.create({ ...input, tenant_id: req.user.tenant_id });
+    const tenant = await AppDataSource.getRepository(Tenant).findOne({ where: { id: req.user.tenant_id } });
+    startWorkflow(contract, tenant, req.user.name);
     normalizePricing(contract);
     contract.fixed_quantity = 0;
     applyTotals(contract);
@@ -113,11 +108,8 @@ export class GrainContractController {
           fixed_quantity: 0,
           ...(source.price_type === "to_fix" ? { price: 0, total_contract_value: 0 } : {}),
           expected_receipt_date: null,
-          status: {
-            status_current: "Ativo",
-            history: [{ date: now.toLocaleDateString("pt-BR"), time: now.toLocaleTimeString("pt-BR"), status: "Ativo", owner_change: req.user.name }],
-          },
         });
+      startWorkflow(draft, await tx.getRepository(Tenant).findOne({ where: { id: tenant_id } }), req.user.name);
       applyTotals(draft);
       const saved = await repo.save(draft);
       const brokers = await tx.getRepository(ContractBroker).find({ where: { tenant_id, contract_id: source.id } });
@@ -129,20 +121,24 @@ export class GrainContractController {
   }
 
   async getAll(req: Request, res: Response) {
-    const { search, crop, product, page = "1", limit = "50" } = req.query;
-    const contractRepo = AppDataSource.getRepository(GrainContract);
+    const { search, crop, product, department, page = "1", limit = "50" } = req.query;
+    const qb = AppDataSource.getRepository(GrainContract).createQueryBuilder("c")
+      .where("c.tenant_id = :tenant_id", { tenant_id: req.user.tenant_id });
+    if (crop) qb.andWhere("c.crop = :crop", { crop });
+    if (product) qb.andWhere("c.product = :product", { product });
+    if (search) qb.andWhere("c.number_contract ILIKE :search", { search: `%${search}%` });
+    // Fila de um departamento (contracts | execution | billing | done | cancelled).
+    if (department) {
+      const stages = stagesOf(String(department));
+      if (stages.length === 0) return res.status(400).json({ error: "Departamento inválido" });
+      qb.andWhere("c.status->>'status_current' IN (:...stages)", { stages });
+    }
 
-    const where: any = { tenant_id: req.user.tenant_id };
-    if (crop) where.crop = crop;
-    if (product) where.product = product;
-    if (search) where.number_contract = ILike(`%${search}%`);
-
-    const [contracts, total] = await contractRepo.findAndCount({
-      where,
-      order: { created_at: "DESC" },
-      skip: (Number(page) - 1) * Number(limit),
-      take: Number(limit),
-    });
+    const [contracts, total] = await qb
+      .orderBy("c.created_at", "DESC")
+      .skip((Number(page) - 1) * Number(limit))
+      .take(Number(limit))
+      .getManyAndCount();
 
     const data = await withBillingStatus(req.user.tenant_id, contracts);
     return res.json({ data, total, page: Number(page), limit: Number(limit) });
@@ -207,28 +203,22 @@ export class GrainContractController {
     return res.json(contract);
   }
 
-  async updateStatus(req: Request, res: Response) {
-    const { status } = req.body;
-    const contractRepo = AppDataSource.getRepository(GrainContract);
-    const contract = await contractRepo.findOne({ where: { id: req.params.id, tenant_id: req.user.tenant_id } });
+  // Passa o contrato adiante no fluxo (enviar à Execução, aprovar, devolver, embarque concluído, cancelar, reabrir).
+  async workflow(req: Request, res: Response) {
+    const { tenant_id } = req.user;
+    const repo = AppDataSource.getRepository(GrainContract);
+    const [contract, tenant] = await Promise.all([
+      repo.findOne({ where: { id: req.params.id, tenant_id } }),
+      AppDataSource.getRepository(Tenant).findOne({ where: { id: tenant_id } }),
+    ]);
     if (!contract) return res.status(404).json({ error: "Contrato não encontrado" });
+    if (!tenant) return res.status(404).json({ error: "Corretora não encontrada" });
 
-    const now = new Date();
-    const historyEntry = {
-      date: now.toLocaleDateString("pt-BR"),
-      time: now.toLocaleTimeString("pt-BR"),
-      status,
-      owner_change: req.user.name,
-    };
-
-    contract.status = {
-      status_current: status,
-      history: [...(contract.status?.history || []), historyEntry],
-    };
-
-    await contractRepo.save(contract);
-    const [withStatus] = await withBillingStatus(req.user.tenant_id, [contract]);
-    return res.json(withStatus);
+    const failure = applyAction(contract, tenant, req.user, req.body?.action, req.body?.reason);
+    if (failure) return res.status(failure.status).json({ error: failure.error });
+    await repo.update({ id: contract.id, tenant_id }, { status: contract.status });
+    const [withStatus] = await withBillingStatus(tenant_id, [contract]);
+    return res.json({ ...withStatus, department: STAGES[contract.status.status_current as keyof typeof STAGES] });
   }
 
   async delete(req: Request, res: Response) {

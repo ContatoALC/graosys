@@ -3,7 +3,7 @@ import { AppDataSource } from "../../database/data-source";
 import { Tenant } from "../entities/Tenant";
 import { pickFields } from "../../utils/pickFields";
 
-const ALLOWED_FIELDS: (keyof Tenant)[] = ["name", "cnpj", "email", "phone", "address", "number", "complement", "district", "city", "state", "zip_code"];
+const ALLOWED_FIELDS: (keyof Tenant)[] = ["name", "cnpj", "email", "phone", "address", "number", "complement", "district", "city", "state", "zip_code", "workflow_mode"];
 
 export class TenantController {
   async getCurrent(req: Request, res: Response) {
@@ -23,6 +23,7 @@ export class TenantController {
 
     const input = pickFields<Tenant>(req.body, ALLOWED_FIELDS);
     if (input.name !== undefined && !String(input.name).trim()) return res.status(400).json({ error: "Informe o nome da corretora" });
+    if (input.workflow_mode !== undefined && !["full", "simple"].includes(input.workflow_mode)) return res.status(400).json({ error: "Modo de fluxo inválido" });
     Object.assign(tenant, input);
     await tenantRepo.save(tenant);
     return res.json(tenant);

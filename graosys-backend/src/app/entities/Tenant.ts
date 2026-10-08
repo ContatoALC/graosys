@@ -52,6 +52,10 @@ export class Tenant {
   @Column({ nullable: true })
   plan_expires_at: Date;
 
+  // full: Contratos → análise da Execução → envio. simple: corretora de um operador, sem a análise.
+  @Column({ default: "full" })
+  workflow_mode: string;
+
   @CreateDateColumn()
   created_at: Date;
 

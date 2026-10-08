@@ -5,6 +5,7 @@ import { Tenant } from "../entities/Tenant";
 import { GrainContract } from "../entities/GrainContract";
 import { ContractEmailLog } from "../entities/ContractEmailLog";
 import { getTenantMailer } from "../../services/tenantMailer";
+import { afterSent, sendBlockedReason } from "../../services/contractWorkflow";
 import { contractPdfFilename, generateContractPdf, getPdfFixations, getPdfSettings } from "../../services/contractPdf";
 
 function escapeHtml(value: unknown): string {
@@ -83,6 +84,8 @@ export class EmailController {
 
     if (!contract) return res.status(404).json({ error: "Contrato não encontrado" });
     if (!tenant) return res.status(404).json({ error: "Corretora não encontrada" });
+    const blocked = sendBlockedReason(contract);
+    if (blocked) return res.status(409).json({ error: blocked });
 
     const sellerEmails = contract.list_email_seller || [];
     const buyerEmails = contract.list_email_buyer || [];
@@ -155,6 +158,9 @@ export class EmailController {
       const who = failed.map((f) => (f.party === "seller" ? "vendedor" : "comprador")).join(" e ");
       return res.status(502).json({ error: `Falha ao enviar o e-mail para o ${who}. Verifique a configuração de e-mail da corretora.`, results, sent_to: sentTo });
     }
+
+    // Enviado a todas as partes: o contrato sai da Execução.
+    if (afterSent(contract, req.user.name)) await contractRepo.update({ id: contract.id, tenant_id }, { status: contract.status });
 
     return res.json({ message: "E-mails enviados com sucesso!", sent_to: sentTo, results });
   }

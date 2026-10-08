@@ -191,8 +191,15 @@ export class GrainContract {
       time: string;
       status: string;
       owner_change: string;
+      at?: string; // ISO; ausente nos registros antigos
+      action?: string; // create | submit | approve | return | send | ship_done | billing | cancel | reopen | migration
+      reason?: string;
     }[];
   };
+
+  // Pós-venda: depois do envio o contrato fica na Execução ("Em Embarque") até o embarque ser concluído.
+  @Column({ default: false })
+  track_shipment: boolean;
 
   @Column({ nullable: true, type: "uuid" })
   table_id: string;

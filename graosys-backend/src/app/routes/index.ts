@@ -96,7 +96,8 @@ router.post("/api/contracts/:id/clone", requirePermission("contracts", "create")
 router.get("/api/contracts/:id/email-logs", requirePermission("execution", "view"), email.logs);
 router.put("/api/contracts/:id/email-recipients", requirePermission("execution", "edit"), email.saveRecipients);
 router.patch("/api/contracts/:id", requirePermission("contracts", "edit"), contract.update);
-router.patch("/api/contracts/:id/status", requirePermission("execution", "edit"), contract.updateStatus);
+// Fluxo por departamento: a permissão é conferida pela etapa atual do contrato (services/contractWorkflow).
+router.post("/api/contracts/:id/workflow", contract.workflow);
 router.delete("/api/contracts/:id", requireRole("admin"), contract.delete);
 
 // Recebimentos (Cobrança)

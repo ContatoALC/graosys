@@ -29,7 +29,7 @@ export class DashboardController {
               coalesce(sum(c.commission_contract), 0) AS commission_total,
               coalesce(sum(c.commission_seller_contract_value), 0) AS commission_seller,
               coalesce(sum(c.commission_buyer_contract_value), 0) AS commission_buyer,
-              count(*) FILTER (WHERE ${STATUS} IN ('Ativo', 'Em Execução')) AS open_contracts
+              count(*) FILTER (WHERE ${STATUS} NOT IN ('Concluído', 'Cancelado')) AS open_contracts
        FROM grain_contracts c WHERE ${where}`, params);
 
     const valueByCurrency = await db.query(

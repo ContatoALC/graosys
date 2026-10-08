@@ -7,7 +7,7 @@ const VERB: Record<string, string> = { POST: "create", PUT: "update", PATCH: "up
 // Nomes amigáveis para ações especiais; as demais seguem "<recurso>.<create|update|delete>".
 const FRIENDLY: Record<string, string> = {
   "contracts.clone.create": "contracts.clone",
-  "contracts.status.update": "contracts.status_change",
+  "contracts.workflow.create": "contracts.status_change",
   "email.send-contract.create": "contracts.email_send",
   "email.send-custom.create": "email.send_custom",
   "auth.reset-password.create": "auth.password_reset",
@@ -54,7 +54,9 @@ export function auditMiddleware(req: Request, res: Response, next: NextFunction)
           // Só nomes dos campos enviados: valores podem conter dados pessoais ou segredos.
           metadata: {
             fields: Object.keys(body).slice(0, 60),
-            ...(typeof body.status === "string" && action === "contracts.status_change" ? { status: body.status } : {}),
+            ...(action === "contracts.status_change" && typeof body.action === "string"
+              ? { workflow_action: body.action.slice(0, 20), status: responseBody?.status?.status_current ?? null }
+              : {}),
           },
           ip: clientIp(req),
           user_agent: userAgent(req),

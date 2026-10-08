@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { AppDataSource } from "../../database/data-source";
 import { Billing } from "../entities/Billing";
 import { pickFields } from "../../utils/pickFields";
+import { syncBillingStage } from "../../services/contractWorkflow";
 
 const ALLOWED_FIELDS: (keyof Billing)[] = [
   "number_contract", "number_broker", "product_name", "year", "receipt_date",
@@ -25,6 +26,7 @@ export class BillingController {
     const billing = billingRepo.create({ ...pickFields<Billing>(req.body, ALLOWED_FIELDS), tenant_id: req.user.tenant_id, owner_record: req.user.name });
     applyValues(billing);
     await billingRepo.save(billing);
+    await syncBillingStage(req.user.tenant_id, [billing.number_contract], req.user.name);
     return res.status(201).json(billing);
   }
 
@@ -63,9 +65,11 @@ export class BillingController {
     const billingRepo = AppDataSource.getRepository(Billing);
     const billing = await billingRepo.findOne({ where: { id: req.params.id, tenant_id: req.user.tenant_id } });
     if (!billing) return res.status(404).json({ error: "Recebimento não encontrado" });
+    const previousNumber = billing.number_contract;
     Object.assign(billing, pickFields<Billing>(req.body, ALLOWED_FIELDS));
     applyValues(billing);
     await billingRepo.save(billing);
+    await syncBillingStage(req.user.tenant_id, [previousNumber, billing.number_contract], req.user.name);
     return res.json(billing);
   }
 
@@ -73,7 +77,9 @@ export class BillingController {
     const billingRepo = AppDataSource.getRepository(Billing);
     const billing = await billingRepo.findOne({ where: { id: req.params.id, tenant_id: req.user.tenant_id } });
     if (!billing) return res.status(404).json({ error: "Recebimento não encontrado" });
+    const number = billing.number_contract;
     await billingRepo.remove(billing);
+    await syncBillingStage(req.user.tenant_id, [number], req.user.name);
     return res.status(204).send();
   }
 

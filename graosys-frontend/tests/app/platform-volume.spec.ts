@@ -35,7 +35,7 @@ test.describe("Painel de Controle › Volume", () => {
         const c = await post(api, "/api/contracts", contractPayload(`VOL-${id}-${s}`, { contract_emission_date: date, name_product: product }));
         ids.push(c.id);
       }
-      expect((await api.patch(`/api/contracts/${ids[2]}/status`, { data: { status: "Cancelado" } })).ok()).toBeTruthy();
+      expect((await api.post(`/api/contracts/${ids[2]}/workflow`, { data: { action: "cancel", reason: "Teste de volume" } })).ok()).toBeTruthy();
 
       // API: o mês isolado soma só os não cancelados; corretora interna fica fora por padrão
       const vol = await (await api.get("/api/platform/volume", { params: { from: date, to: date, include_internal: "true" } })).json();
