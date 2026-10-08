@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -136,7 +137,7 @@ export function FixationsPanel({ contract, canEdit, onChanged, embedded = false 
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2"><Label>Data</Label><Input type="date" value={form.fixation_date ?? ""} onChange={(e) => setForm({ ...form, fixation_date: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Data</Label><DatePicker aria-label="Data" value={form.fixation_date ?? ""} onChange={(v) => setForm({ ...form, fixation_date: v })} /></div>
               {field("quantity", `Quantidade (${unit})`, false, "0.001")}
             </div>
             {isFrame ? (

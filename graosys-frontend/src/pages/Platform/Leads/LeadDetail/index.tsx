@@ -5,6 +5,7 @@ import { useFieldArray, useForm } from "react-hook-form";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FormDatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/services/api";
@@ -83,7 +84,7 @@ export function PlatformLeadDetailPage() {
                 <Input {...register("whatsapp")} />
               </div>
               <div className="space-y-2"><Label>Próximo passo</Label><Input {...register("next_step")} /></div>
-              <div className="space-y-2"><Label>Data do próximo passo</Label><Input type="date" {...register("next_step_date")} /></div>
+              <div className="space-y-2"><Label>Data do próximo passo</Label><FormDatePicker control={control} name="next_step_date" aria-label="Data do próximo passo" /></div>
             </div>
           </CardContent></Card>
 

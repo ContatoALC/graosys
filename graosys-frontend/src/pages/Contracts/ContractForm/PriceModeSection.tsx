@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FormDatePicker } from "@/components/ui/date-picker";
+import type { Control } from "react-hook-form";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +13,7 @@ interface Props {
   onPriceType: (v: string) => void;
   onMode: (v: string) => void;
   register: (name: any, opts?: any) => any;
+  control: Control<any>;
   hasError: boolean;
 }
 
@@ -19,7 +22,7 @@ const MODES = [
   { value: "frame", title: "Frame", text: "Preço composto por Chicago (CBOT) + prêmio + câmbio. Cada componente pode ser travado agora ou fixado depois." },
 ];
 
-export function PriceModeSection({ priceType, mode, currency, locked, onPriceType, onMode, register, hasError }: Props) {
+export function PriceModeSection({ priceType, mode, currency, locked, onPriceType, onMode, register, control, hasError }: Props) {
   const toFix = priceType === "to_fix";
   return (
     <div className="space-y-4 rounded-md border bg-muted/20 p-4">
@@ -64,7 +67,7 @@ export function PriceModeSection({ priceType, mode, currency, locked, onPriceTyp
 
           <div className="space-y-2 sm:w-1/3">
             <Label>Prazo para fixação *</Label>
-            <Input type="date" {...register("fixation_deadline", { required: true })} className={hasError ? "border-destructive" : ""} />
+            <FormDatePicker control={control} name="fixation_deadline" rules={{ required: true }} invalid={hasError} aria-label="Prazo para fixação" />
           </div>
         </>
       )}

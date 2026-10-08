@@ -3,6 +3,7 @@ import { Plus, Search, DollarSign, CheckCircle, Clock } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FormDatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ContractStageBadge } from "@/components/ContractStageBadge";
@@ -287,11 +288,11 @@ export function ReceiptPage() {
               </div>
               <div className="space-y-2">
                 <Label>Data Recebimento</Label>
-                <Input type="date" {...register("receipt_date")} />
+                <FormDatePicker control={control} name="receipt_date" />
               </div>
               <div className="space-y-2">
                 <Label>Data Prev. Recebimento</Label>
-                <Input type="date" {...register("expected_receipt_date")} />
+                <FormDatePicker control={control} name="expected_receipt_date" />
               </div>
               <div className="space-y-2">
                 <Label>RPS</Label>

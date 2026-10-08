@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FormDatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,7 +37,7 @@ export function PlatformPage() {
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [error, setError] = useState("");
-  const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm<NewTenantForm>({ defaultValues: { plan: "trial" } });
+  const { register, control, handleSubmit, reset, formState: { isSubmitting } } = useForm<NewTenantForm>({ defaultValues: { plan: "trial" } });
 
   function load(q = search) {
     setLoading(true);
@@ -123,7 +124,7 @@ export function PlatformPage() {
               <div className="space-y-2"><Label>Telefone</Label><Input {...register("phone")} /></div>
               <div className="space-y-2 sm:col-span-2"><Label>E-mail da corretora</Label><Input type="email" {...register("email")} /></div>
               <div className="space-y-2"><Label>Plano</Label><select className={selectClass} {...register("plan")}>{PLANS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}</select></div>
-              <div className="space-y-2"><Label>Vencimento</Label><Input type="date" {...register("plan_expires_at")} /></div>
+              <div className="space-y-2"><Label>Vencimento</Label><FormDatePicker control={control} name="plan_expires_at" aria-label="Vencimento" /></div>
             </div>
             <div className="space-y-3 border-t pt-4">
               <p className="text-sm font-medium">Primeiro administrador</p>

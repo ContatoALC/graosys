@@ -31,7 +31,7 @@ test.describe("Leads (superadmin)", () => {
     await expect(page.getByRole("heading", { name })).toBeVisible();
     await expect(page.locator('select[name="status"]')).toHaveValue("ligacao_feita");
     await page.locator('input[name="next_step"]').fill("Agendar demo");
-    await page.locator('input[name="next_step_date"]').fill("2030-01-15");
+    await page.locator('input[name="next_step_date"]').fill("15/01/2030");
     await page.getByRole("button", { name: "Adicionar telefone" }).click();
     await page.locator('input[name="phones.0.number"]').fill("(41) 3333-4444");
     await page.getByRole("button", { name: "Salvar" }).click();
@@ -39,7 +39,7 @@ test.describe("Leads (superadmin)", () => {
 
     await page.reload();
     await expect(page.locator('input[name="next_step"]')).toHaveValue("Agendar demo");
-    await expect(page.locator('input[name="next_step_date"]')).toHaveValue("2030-01-15");
+    await expect(page.locator('input[name="next_step_date"]')).toHaveValue("15/01/2030");
     await expect(page.locator('input[name="phones.0.number"]')).toHaveValue("(41) 3333-4444");
 
     page.once("dialog", (d) => d.accept());

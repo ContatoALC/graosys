@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { test, expect } from "../support/fixtures";
 import { adminApi, contractPayload, post, uid } from "../support/api";
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => new Date().toLocaleDateString("pt-BR"); // o campo de data é digitado como dd/mm/aaaa
 
 // Status de cobrança mostrado na lista de contratos (coluna "Cobrança").
 async function expectBillingStatus(page: Page, number: string, status: string) {

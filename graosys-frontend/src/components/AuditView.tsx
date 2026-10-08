@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from "react";
 import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -59,8 +60,8 @@ export function AuditView({ platform = false }: { platform?: boolean }) {
         <select className={selectClass} value={filters.result} onChange={(e) => set("result", e.target.value)}>
           <option value="">Todos os resultados</option><option value="ok">Sucesso</option><option value="error">Erro / negado</option>
         </select>
-        <Input type="date" value={filters.from} onChange={(e) => set("from", e.target.value)} title="De" />
-        <Input type="date" value={filters.to} onChange={(e) => set("to", e.target.value)} title="Até" />
+        <DatePicker value={filters.from} onChange={(v) => set("from", v)} title="De" aria-label="De" />
+        <DatePicker value={filters.to} onChange={(v) => set("to", v)} title="Até" aria-label="Até" />
         {platform && (
           <select className={`${selectClass} lg:col-span-2`} value={filters.tenant_id} onChange={(e) => set("tenant_id", e.target.value)}>
             <option value="">Todas as corretoras</option>

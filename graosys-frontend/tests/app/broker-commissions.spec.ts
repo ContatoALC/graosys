@@ -18,9 +18,9 @@ test.describe("Comissões de brokers", () => {
     await brokerRow.getByTitle("Tabela de comissão").click();
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByText("Nenhum % cadastrado")).toBeVisible();
-    for (const [pct, from] of [["20", "2024-01-01"], ["30", "2025-01-01"]]) {
+    for (const [pct, from] of [["20", "01/01/2024"], ["30", "01/01/2025"]]) {
       await dialog.getByPlaceholder("ex.: 0,50").fill(pct);
-      await dialog.locator('input[type="date"]').fill(from);
+      await dialog.getByLabel("A partir de").fill(from);
       await dialog.getByRole("button", { name: "Adicionar" }).click();
       await expect(dialog.getByRole("row", { name: new RegExp(`${pct}%`) })).toBeVisible();
     }

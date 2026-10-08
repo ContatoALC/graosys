@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import {
   Table,
@@ -78,7 +79,7 @@ export function ReportsPage() {
       ],
       body: getTableRows(),
       styles: { fontSize: 8 },
-      headStyles: { fillColor: [22, 163, 74] },
+      headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255] },
     });
 
     doc.save("relatorio-contratos.pdf");
@@ -138,22 +139,18 @@ export function ReportsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Data Início</Label>
-                <Input
-                  type="date"
+                <DatePicker
+                  aria-label="Data Início"
                   value={filters.start_date}
-                  onChange={(e) =>
-                    setFilters((f) => ({ ...f, start_date: e.target.value }))
-                  }
+                  onChange={(v) => setFilters((f) => ({ ...f, start_date: v }))}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Data Fim</Label>
-                <Input
-                  type="date"
+                <DatePicker
+                  aria-label="Data Fim"
                   value={filters.end_date}
-                  onChange={(e) =>
-                    setFilters((f) => ({ ...f, end_date: e.target.value }))
-                  }
+                  onChange={(v) => setFilters((f) => ({ ...f, end_date: v }))}
                 />
               </div>
             </div>

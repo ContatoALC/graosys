@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2, Handshake, Percent } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -71,7 +72,7 @@ function RatesDialog({ broker, onClose, onChanged }: { broker: any | null; onClo
         </div>
         <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
           <div className="space-y-1"><Label>Novo %</Label><Input type="number" step="0.0001" min="0" max="100" placeholder="ex.: 0,50" value={percent} onChange={(e) => setPercent(e.target.value)} /></div>
-          <div className="space-y-1"><Label>A partir de</Label><Input type="date" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} /></div>
+          <div className="space-y-1"><Label>A partir de</Label><DatePicker aria-label="A partir de" value={validFrom} onChange={setValidFrom} /></div>
           <Button type="button" onClick={add} disabled={percent === "" || !validFrom}>Adicionar</Button>
         </div>
         {error && <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}

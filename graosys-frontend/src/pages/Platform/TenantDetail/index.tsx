@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FormDatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -108,7 +109,7 @@ export function PlatformTenantDetailPage() {
               <div className="space-y-2"><Label>Telefone</Label><Input {...tenantForm.register("phone")} /></div>
               <div className="space-y-2"><Label>Plano</Label><select className={selectClass} {...tenantForm.register("plan")}>{PLANS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}</select></div>
               <div className="space-y-2"><Label>Status</Label><select className={selectClass} {...tenantForm.register("status")}>{STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}</select></div>
-              <div className="space-y-2"><Label>Vencimento do plano</Label><Input type="date" {...tenantForm.register("plan_expires_at")} /></div>
+              <div className="space-y-2"><Label>Vencimento do plano</Label><FormDatePicker control={tenantForm.control} name="plan_expires_at" aria-label="Vencimento do plano" /></div>
             </div>
             {msg && <p className={msg.type === "ok" ? "text-sm text-green-700" : "text-sm text-destructive"}>{msg.text}</p>}
             <Button type="submit" disabled={tenantForm.formState.isSubmitting}>Salvar alterações</Button>

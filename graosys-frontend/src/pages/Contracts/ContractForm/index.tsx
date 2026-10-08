@@ -5,6 +5,7 @@ import { ArrowLeft, Loader2, Plus, X } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FormDatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -262,7 +263,7 @@ export function ContractFormPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Data de Emissão</Label>
-                  <Input type="date" {...register("contract_emission_date")} />
+                  <FormDatePicker control={control} name="contract_emission_date" aria-label="Data de Emissão" />
                 </div>
                 <div className="space-y-2">
                   <Label>Responsável</Label>
@@ -448,7 +449,7 @@ export function ContractFormPage() {
                 </div>
               </div>
               <PriceModeSection
-                priceType={watch("price_type")} mode={watch("fixation_mode")} currency={watch("type_currency")}
+                priceType={watch("price_type")} mode={watch("fixation_mode")} currency={watch("type_currency")} control={control as any}
                 locked={isEditing && Number(saved?.fixed_quantity) > 0}
                 onPriceType={(v) => setValue("price_type", v, { shouldDirty: true })} onMode={(v) => setValue("fixation_mode", v, { shouldDirty: true })}
                 register={register as any} hasError={!!errors.fixation_deadline}
@@ -591,15 +592,15 @@ export function ContractFormPage() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>Início Retirada</Label>
-                  <Input type="date" {...register("initial_pickup_date")} />
+                  <FormDatePicker control={control} name="initial_pickup_date" />
                 </div>
                 <div className="space-y-2">
                   <Label>Fim Retirada</Label>
-                  <Input type="date" {...register("final_pickup_date")} />
+                  <FormDatePicker control={control} name="final_pickup_date" />
                 </div>
                 <div className="space-y-2">
                   <Label>Data de Pagamento</Label>
-                  <Input type="date" {...register("payment_date")} />
+                  <FormDatePicker control={control} name="payment_date" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
