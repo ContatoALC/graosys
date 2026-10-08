@@ -23,6 +23,7 @@ Sem backend dá para rodar só `npm run test:public`.
 | `app/billing.spec.ts` | Recebimentos mudam o status de cobrança do contrato (A Faturar → A Receber → Parcial → Recebido; Em Atraso); cálculo do líquido. |
 | `app/broker-commissions.spec.ts` | Tabela de % por data do broker, % do contrato, parte liberada pelo que a corretora recebeu, filtro de período e produtividade. |
 | `app/permissions.spec.ts` | Usuário comum: menu, telas restritas redirecionam, API devolve 403; liberar módulo pelo Controle de Acesso. |
+| `app/platform-tenant-delete.spec.ts` | Excluir corretora pelo Painel: só inativa/suspensa, confirmação pelo nome, apaga todos os dados e o login; a própria corretora não sai. |
 | `app/leads.spec.ts` | Lead: criar, mover de etapa, editar ficha em `/platform/leads/:id`, remover. |
 | `public/login.spec.ts` | Login, redirecionamento e recuperação de senha. |
 | `public/password-reset.spec.ts` | `/reset-password` sem token, senhas diferentes, token inválido. |

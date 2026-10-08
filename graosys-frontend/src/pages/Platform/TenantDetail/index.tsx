@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, KeyRound, Plus } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, KeyRound, Plus, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { api } from "@/services/api";
 import { PLANS, STATUSES, selectClass, fmtDateTime, PlatformTabs } from "../shared";
 
@@ -25,6 +25,11 @@ export function PlatformTenantDetailPage() {
   const [resetUser, setResetUser] = useState<any | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [resetError, setResetError] = useState("");
+  const [showDelete, setShowDelete] = useState(false);
+  const [confirmName, setConfirmName] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const navigate = useNavigate();
   const tenantForm = useForm<TenantForm>();
   const userForm = useForm<UserForm>({ defaultValues: { role: "admin" } });
 
@@ -66,8 +71,18 @@ export function PlatformTenantDetailPage() {
     } catch (e: any) { setResetError(e.response?.data?.error || "Erro ao redefinir senha"); }
   }
 
+  async function deleteTenant() {
+    setDeleteError(""); setDeleting(true);
+    try {
+      await api.delete(`/api/platform/tenants/${id}`, { data: { confirm_name: confirmName } });
+      navigate("/platform");
+    } catch (e: any) { setDeleteError(e.response?.data?.error || "Erro ao excluir a corretora"); }
+    finally { setDeleting(false); }
+  }
+
   if (!data) return <div className="p-6 text-muted-foreground">Carregando...</div>;
   const { tenant, users, metrics } = data;
+  const internal = users.some((u: any) => u.role === "superadmin");
 
   return (
     <div className="flex flex-col">
@@ -130,7 +145,48 @@ export function PlatformTenantDetailPage() {
             </Table>
           </CardContent></Card>
         </div>
+
+        {!internal && (
+          <Card className="border-destructive/40" data-testid="danger-zone">
+            <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
+              <div className="space-y-1">
+                <p className="font-semibold text-destructive">Excluir corretora</p>
+                <p className="text-sm text-muted-foreground">
+                  Apaga a corretora e todos os dados dela: usuários, clientes, contratos, recebimentos e configurações. Não pode ser desfeito.
+                </p>
+                {tenant.status === "active" && (
+                  <p className="text-sm text-muted-foreground">Para excluir, primeiro mude o status para <strong>Inativo</strong> ou <strong>Suspenso</strong> e salve.</p>
+                )}
+              </div>
+              <Button variant="destructive" disabled={tenant.status === "active"} onClick={() => { setConfirmName(""); setDeleteError(""); setShowDelete(true); }}>
+                <Trash2 className="mr-2 h-4 w-4" />Excluir corretora
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
+
+      <Dialog open={showDelete} onOpenChange={setShowDelete}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir {tenant.name}?</DialogTitle>
+            <DialogDescription>
+              Serão apagados {metrics.users} usuário(s), {metrics.clients} cliente(s), {metrics.contracts} contrato(s) e {metrics.billings} recebimento(s), além do histórico e das configurações. Não há como recuperar.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="confirm-tenant-name">Digite <strong>{tenant.name}</strong> para confirmar</Label>
+            <Input id="confirm-tenant-name" value={confirmName} onChange={(e) => setConfirmName(e.target.value)} autoComplete="off" />
+            {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDelete(false)}>Cancelar</Button>
+            <Button variant="destructive" disabled={confirmName.trim() !== tenant.name.trim() || deleting} onClick={deleteTenant}>
+              {deleting ? "Excluindo..." : "Excluir definitivamente"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showUser} onOpenChange={setShowUser}>
         <DialogContent>

@@ -9,7 +9,7 @@ const ACTIONS: Record<string, string> = {
   "users.create": "Usuário criado", "users.update": "Usuário editado", "users.delete": "Usuário excluído",
   "product-tables.create": "Mesa criada", "product-tables.update": "Mesa editada", "product-tables.delete": "Mesa excluída",
   "email-settings.update": "E-mail da corretora alterado", "email_settings.test": "Teste de e-mail", "pdf_settings.update": "Layout do PDF alterado",
-  "tenant.update": "Dados da corretora alterados",
+  "tenant.update": "Dados da corretora alterados", "platform.tenants.delete": "Corretora excluída",
 };
 
 export function actionLabel(action: string) {

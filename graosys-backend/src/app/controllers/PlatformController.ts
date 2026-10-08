@@ -159,6 +159,36 @@ export class PlatformController {
     return res.json(tenant);
   }
 
+  // Exclui a corretora e todos os dados dela, de uma vez (irreversível). Travas: precisa estar inativa ou
+  // suspensa, o nome digitado tem que bater, e nem a própria corretora nem a interna da plataforma saem.
+  async deleteTenant(req: Request, res: Response) {
+    const tenant = await tenantRepo().findOne({ where: { id: req.params.id } });
+    if (!tenant) return res.status(404).json({ error: "Corretora não encontrada" });
+    if (tenant.id === req.user.tenant_id) return res.status(400).json({ error: "Você não pode excluir a sua própria corretora" });
+    if (await userRepo().count({ where: { tenant_id: tenant.id, role: "superadmin" } })) {
+      return res.status(400).json({ error: "A corretora interna da plataforma não pode ser excluída" });
+    }
+    if (tenant.status === "active") return res.status(400).json({ error: "Inative ou suspenda a corretora antes de excluir" });
+    if (String(req.body?.confirm_name ?? "").trim() !== String(tenant.name).trim()) {
+      return res.status(400).json({ error: "Digite o nome exato da corretora para confirmar" });
+    }
+
+    const deleted: Record<string, number> = {};
+    await AppDataSource.transaction(async (tx) => {
+      // Toda tabela com tenant_id (inclusive as que surgirem depois); users por último, por causa da FK para tenants.
+      const tables: { table_name: string }[] = await tx.query(
+        `SELECT table_name FROM information_schema.columns
+          WHERE table_schema = 'public' AND column_name = 'tenant_id' AND table_name <> 'users'
+          ORDER BY table_name`);
+      for (const table of [...tables.map((t) => t.table_name), "users"]) {
+        const [, count] = await tx.query(`DELETE FROM "${table}" WHERE tenant_id = $1`, [tenant.id]);
+        deleted[table] = Number(count) || 0;
+      }
+      await tx.query(`DELETE FROM tenants WHERE id = $1`, [tenant.id]);
+    });
+    return res.json({ id: tenant.id, name: tenant.name, deleted });
+  }
+
   async createUser(req: Request, res: Response) {
     const tenant = await tenantRepo().findOne({ where: { id: req.params.id } });
     if (!tenant) return res.status(404).json({ error: "Corretora não encontrada" });

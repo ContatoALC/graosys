@@ -146,6 +146,7 @@ router.get("/api/platform/tenants", requireSuperadmin, platform.listTenants);
 router.post("/api/platform/tenants", requireSuperadmin, platform.createTenant);
 router.get("/api/platform/tenants/:id", requireSuperadmin, platform.getTenant);
 router.patch("/api/platform/tenants/:id", requireSuperadmin, platform.updateTenant);
+router.delete("/api/platform/tenants/:id", requireSuperadmin, platform.deleteTenant);
 router.post("/api/platform/tenants/:id/users", requireSuperadmin, platform.createUser);
 router.patch("/api/platform/users/:id", requireSuperadmin, platform.updateUser);
 router.post("/api/platform/users/:id/reset-password", requireSuperadmin, platform.resetUserPassword);
