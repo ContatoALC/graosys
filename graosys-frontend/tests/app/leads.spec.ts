@@ -42,8 +42,12 @@ test.describe("Leads (superadmin)", () => {
     await expect(page.locator('input[name="next_step_date"]')).toHaveValue("15/01/2030");
     await expect(page.locator('input[name="phones.0.number"]')).toHaveValue("(41) 3333-4444");
 
-    page.once("dialog", (d) => d.accept());
+    // Confirmação no visual do sistema (não é mais o confirm() do navegador)
     await page.getByRole("button", { name: "Remover lead" }).click();
+    const confirm = page.getByRole("alertdialog");
+    await expect(confirm).toContainText("Remover este lead?");
+    await confirm.getByRole("button", { name: "Remover" }).click();
+    await expect(page.getByText("Lead removido")).toBeVisible();
     await expect(page).toHaveURL(/\/platform\/leads$/);
     await page.getByPlaceholder("Buscar por nome, praça ou decisor...").fill(name);
     await page.getByRole("button", { name: "Buscar" }).click();

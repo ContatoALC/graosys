@@ -9,10 +9,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { api } from "@/services/api";
 import { useForm } from "react-hook-form";
+import { useConfirm } from "@/contexts/ConfirmContext";
+import { toast } from "sonner";
 
 interface ProductForm { product_type: string; name: string; quality: string; observation: string; }
 
 export function AdminProductsPage() {
+  const confirm = useConfirm();
   const [products, setProducts] = useState<any[]>([]);
   const [showDialog, setShowDialog] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -28,13 +31,14 @@ export function AdminProductsPage() {
     try {
       if (editingId) { await api.patch(`/api/products/${editingId}`, data); }
       else { await api.post("/api/products", data); }
+      toast.success(editingId ? "Produto atualizado" : "Produto criado");
       setShowDialog(false); load();
-    } catch (e: any) { alert(e.response?.data?.error || "Erro ao salvar"); }
+    } catch (e: any) { toast.error(e.response?.data?.error || "Erro ao salvar"); }
   }
 
   async function del(id: string) {
-    if (!confirm("Remover produto?")) return;
-    await api.delete(`/api/products/${id}`); load();
+    if (!(await confirm({ title: "Remover produto?", confirmText: "Remover", destructive: true }))) return;
+    await api.delete(`/api/products/${id}`); toast.success("Produto removido"); load();
   }
 
   return (

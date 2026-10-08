@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/services/api";
 import { LEAD_STAGES, PlatformTabs, selectClass } from "../../shared";
+import { useConfirm } from "@/contexts/ConfirmContext";
+import { toast } from "sonner";
 
 interface LeadForm {
   name: string; region: string; status: string; probable_plan: string;
@@ -22,6 +24,7 @@ const textareaClass = "flex min-h-[90px] w-full rounded-md border border-input b
 const STRING_FIELDS = ["name", "region", "probable_plan", "email", "address", "cnpj", "corporate_name", "site", "hook", "decision_maker", "whatsapp", "next_step"] as const;
 
 export function PlatformLeadDetailPage() {
+  const confirm = useConfirm();
   const { id } = useParams();
   const navigate = useNavigate();
   const [loaded, setLoaded] = useState(false);
@@ -48,8 +51,9 @@ export function PlatformLeadDetailPage() {
   }
 
   async function del() {
-    if (!confirm("Remover este lead?")) return;
+    if (!(await confirm({ title: "Remover este lead?", description: "Esta ação não pode ser desfeita.", confirmText: "Remover", destructive: true }))) return;
     await api.delete(`/api/platform/leads/${id}`);
+    toast.success("Lead removido");
     navigate("/platform/leads");
   }
 

@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { ACTIONS, actionsFor, type WorkflowAction } from "@/lib/workflow";
+import { ACTIONS, ACTION_PAST, actionsFor, type WorkflowAction } from "@/lib/workflow";
 import { api } from "@/services/api";
+import { toast } from "sonner";
 
 const VARIANT = { primary: "default", outline: "outline", danger: "destructive" } as const;
 export const ROW_BUTTON = "h-8 whitespace-nowrap px-2.5 text-xs";
@@ -33,10 +34,11 @@ export function ContractWorkflowActions({ contract, onChanged, only, compact }: 
     try {
       const r = await api.post(`/api/contracts/${contract.id}/workflow`, { action, reason: why });
       setAsking(null);
+      toast.success(`${ACTION_PAST[action]} · ${contract.number_contract}`);
       onChanged(r.data);
     } catch (e: any) {
       const msg = e.response?.data?.error || "Não foi possível mover o contrato";
-      if (asking) setError(msg); else alert(msg);
+      if (asking) setError(msg); else toast.error(msg);
     } finally { setBusy(null); }
   }
 

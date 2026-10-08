@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { api } from "@/services/api";
 import { LEAD_STAGES, PlatformTabs, selectClass } from "../shared";
+import { toast } from "sonner";
 
 interface NewLeadForm { name: string; region: string; probable_plan: string; email: string; decision_maker: string; }
 
@@ -36,7 +37,7 @@ export function PlatformLeadsPage() {
     const previous = leads;
     setLeads(leads.map((l) => (l.id === lead.id ? { ...l, status } : l)));
     try { await api.patch(`/api/platform/leads/${lead.id}`, { status }); }
-    catch { setLeads(previous); alert("Erro ao mover o lead"); }
+    catch { setLeads(previous); toast.error("Erro ao mover o lead"); }
   }
 
   async function onSubmit(data: NewLeadForm) {

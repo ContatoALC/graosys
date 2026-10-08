@@ -10,6 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { api } from "@/services/api";
 import { defaultConversionFactor, framePpePreview, framePricePreview, moneyFmt, qtyFmt } from "@/lib/pricing";
+import { useConfirm } from "@/contexts/ConfirmContext";
+import { toast } from "sonner";
 
 const STATUS: Record<string, { label: string; variant: any }> = {
   waiting: { label: "Aguardando fixação", variant: "warning" }, partial: { label: "Parcialmente fixado", variant: "outline" }, fixed: { label: "Totalmente fixado", variant: "success" },
@@ -20,6 +22,7 @@ const seqLabel = (n?: number | null) => (n ? `F${String(n).padStart(2, "0")}` : 
 
 // Fixações de um contrato a fixar: saldo, preço médio, lançamento e exclusão. O servidor valida e calcula o preço.
 export function FixationsPanel({ contract, canEdit, onChanged, embedded = false }: { contract: any; canEdit: boolean; onChanged: () => void; embedded?: boolean }) {
+  const confirm = useConfirm();
   const [data, setData] = useState<{ fixations: any[]; summary: any } | null>(null);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({});
@@ -64,9 +67,13 @@ export function FixationsPanel({ contract, canEdit, onChanged, embedded = false 
   }
 
   async function remove(f: any) {
-    if (!confirm(`Excluir a fixação de ${dmy(f.fixation_date)} (${qtyFmt(f.quantity)} ${unit})? O saldo e o preço médio serão recalculados.`)) return;
-    try { await api.delete(`/api/contracts/${contract.id}/fixations/${f.id}`); load(); onChanged(); }
-    catch (e: any) { alert(e.response?.data?.error || "Erro ao excluir"); }
+    if (!(await confirm({
+      title: "Excluir fixação?",
+      description: `A fixação de ${dmy(f.fixation_date)} (${qtyFmt(f.quantity)} ${unit}) será excluída. O saldo e o preço médio serão recalculados.`,
+      confirmText: "Excluir", destructive: true,
+    }))) return;
+    try { await api.delete(`/api/contracts/${contract.id}/fixations/${f.id}`); toast.success("Fixação excluída"); load(); onChanged(); }
+    catch (e: any) { toast.error(e.response?.data?.error || "Erro ao excluir"); }
   }
 
   if (!data) return null;

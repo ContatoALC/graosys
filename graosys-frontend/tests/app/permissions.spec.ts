@@ -46,10 +46,10 @@ test.describe("Permissões (usuário comum)", () => {
       await page.goto("/admin/access");
       const card = page.locator("div.rounded-lg", { has: page.getByText(email) }).first();
       await card.getByRole("row", { name: /Contratos/ }).getByRole("checkbox").first().check();
-      page.once("dialog", (d) => d.accept());
       const saved = page.waitForResponse((r) => r.url().includes(`/api/users/${user.id}`) && r.request().method() === "PATCH");
       await card.getByRole("button", { name: "Salvar" }).click();
       expect((await saved).ok()).toBeTruthy();
+      await expect(page.getByText("Permissões salvas")).toBeVisible(); // toast
       await api.dispose();
 
       // O backend guarda permissões por sessão por até 30s (authMiddleware); uma sessão nova já vê a mudança.

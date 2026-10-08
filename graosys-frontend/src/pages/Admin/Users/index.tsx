@@ -11,10 +11,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/services/api";
 import { useForm, Controller } from "react-hook-form";
+import { useConfirm } from "@/contexts/ConfirmContext";
+import { toast } from "sonner";
 
 interface UserForm { name: string; email: string; password: string; role: string; active: boolean; }
 
 export function AdminUsersPage() {
+  const confirm = useConfirm();
   const [users, setUsers] = useState<any[]>([]);
   const [showDialog, setShowDialog] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -35,16 +38,18 @@ export function AdminUsersPage() {
       } else {
         await api.post("/api/users", data);
       }
+      toast.success(editingId ? "Usuário atualizado" : "Usuário criado");
       setShowDialog(false);
       load();
     } catch (e: any) {
-      alert(e.response?.data?.error || "Erro ao salvar");
+      toast.error(e.response?.data?.error || "Erro ao salvar");
     }
   }
 
   async function deleteUser(id: string) {
-    if (!confirm("Remover este usuário?")) return;
+    if (!(await confirm({ title: "Remover este usuário?", description: "Ele perde o acesso ao sistema.", confirmText: "Remover", destructive: true }))) return;
     await api.delete(`/api/users/${id}`);
+    toast.success("Usuário removido");
     load();
   }
 

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/services/api";
+import { toast } from "sonner";
 
 const ROLES = [
   { role: "Vendedor", label: "Via do vendedor" },
@@ -35,7 +36,7 @@ export function ContractPdfButton({ contractId }: { contractId: string }) {
       else window.open(url, "_blank");
     } catch {
       tab?.close();
-      alert("Erro ao gerar o PDF do contrato");
+      toast.error("Erro ao gerar o PDF do contrato");
     } finally {
       setLoading(false);
     }

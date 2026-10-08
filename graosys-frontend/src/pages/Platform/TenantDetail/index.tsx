@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { api } from "@/services/api";
 import { PLANS, STATUSES, selectClass, fmtDateTime, PlatformTabs } from "../shared";
+import { toast } from "sonner";
 
 interface TenantForm { name: string; cnpj: string; email: string; phone: string; plan: string; status: string; plan_expires_at: string; }
 interface UserForm { name: string; email: string; password: string; role: string; }
@@ -61,7 +62,7 @@ export function PlatformTenantDetailPage() {
 
   async function toggleActive(u: any) {
     try { await api.patch(`/api/platform/users/${u.id}`, { active: !u.active }); load(); }
-    catch (e: any) { alert(e.response?.data?.error || "Erro ao atualizar usuário"); }
+    catch (e: any) { toast.error(e.response?.data?.error || "Erro ao atualizar usuário"); }
   }
 
   async function doReset() {

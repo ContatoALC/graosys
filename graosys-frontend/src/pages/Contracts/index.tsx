@@ -15,8 +15,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/services/api";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { useConfirm } from "@/contexts/ConfirmContext";
+import { toast } from "sonner";
 
 export function ContractsPage() {
+  const confirm = useConfirm();
   const [contracts, setContracts] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
@@ -27,13 +30,18 @@ export function ContractsPage() {
   const [view, setView] = useState<"queue" | "all">("queue");
 
   async function cloneContract(c: any) {
-    if (!confirm(`Clonar o contrato ${c.number_contract}? O clone recebe o próximo número da sua base.`)) return;
+    if (!(await confirm({
+      title: `Clonar o contrato ${c.number_contract}?`,
+      description: "O clone recebe o próximo número da sua base e começa em Contratos · Em Elaboração.",
+      confirmText: "Clonar",
+    }))) return;
     setCloningId(c.id);
     try {
       const r = await api.post(`/api/contracts/${c.id}/clone`);
+      toast.success(`Contrato clonado: ${r.data.number_contract}`);
       navigate(`/contracts/${r.data.id}`);
     } catch (e: any) {
-      alert(e.response?.data?.error || "Erro ao clonar contrato");
+      toast.error(e.response?.data?.error || "Erro ao clonar contrato");
       setCloningId(null);
     }
   }

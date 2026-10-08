@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { api } from "@/services/api";
 import { formatDate } from "@/lib/utils";
 import { useForm } from "react-hook-form";
+import { useConfirm } from "@/contexts/ConfirmContext";
+import { toast } from "sonner";
 
 interface BrokerForm { name: string; code: string; cnpj_cpf: string; email: string; phone: string; active: boolean; user_id: string; }
 
@@ -21,6 +23,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 // Tabela de comissão do broker: cada % vale a partir da data de início, sem mudar contratos anteriores.
 function RatesDialog({ broker, onClose, onChanged }: { broker: any | null; onClose: () => void; onChanged: () => void }) {
+  const confirm = useConfirm();
   const [rates, setRates] = useState<any[]>([]);
   const [percent, setPercent] = useState("");
   const [validFrom, setValidFrom] = useState(today());
@@ -40,7 +43,7 @@ function RatesDialog({ broker, onClose, onChanged }: { broker: any | null; onClo
   }
 
   async function remove(id: string) {
-    if (!confirm("Excluir esta vigência? Contratos do período passam a usar a vigência anterior.")) return;
+    if (!(await confirm({ title: "Excluir esta vigência?", description: "Contratos do período passam a usar a vigência anterior.", confirmText: "Excluir", destructive: true }))) return;
     try { await api.delete(`/api/brokers/${broker.id}/rates/${id}`); load(); onChanged(); }
     catch (e: any) { setError(e.response?.data?.error || "Erro ao excluir"); }
   }
@@ -83,6 +86,7 @@ function RatesDialog({ broker, onClose, onChanged }: { broker: any | null; onClo
 }
 
 export function AdminBrokersPage() {
+  const confirm = useConfirm();
   const [brokers, setBrokers] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [showDialog, setShowDialog] = useState(false);
@@ -101,14 +105,15 @@ export function AdminBrokersPage() {
       const payload = { ...data, user_id: data.user_id || null };
       if (editingId) { await api.patch(`/api/brokers/${editingId}`, payload); }
       else { await api.post("/api/brokers", payload); }
+      toast.success(editingId ? "Broker atualizado" : "Broker criado");
       setShowDialog(false); load();
-    } catch (e: any) { alert(e.response?.data?.error || "Erro ao salvar"); }
+    } catch (e: any) { toast.error(e.response?.data?.error || "Erro ao salvar"); }
   }
 
   async function del(id: string) {
-    if (!confirm("Remover broker?")) return;
-    try { await api.delete(`/api/brokers/${id}`); load(); }
-    catch (e: any) { alert(e.response?.data?.error || "Erro ao remover"); }
+    if (!(await confirm({ title: "Remover broker?", description: "A tabela de comissão dele também sai.", confirmText: "Remover", destructive: true }))) return;
+    try { await api.delete(`/api/brokers/${id}`); toast.success("Broker removido"); load(); }
+    catch (e: any) { toast.error(e.response?.data?.error || "Erro ao remover"); }
   }
 
   const userName = (id: string | null) => users.find((u) => u.id === id)?.name;

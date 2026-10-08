@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { api } from "@/services/api";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useForm, Controller } from "react-hook-form";
+import { toast } from "sonner";
 
 interface BillingForm {
   number_contract: string;
@@ -103,10 +104,11 @@ export function ReceiptPage() {
       } else {
         await api.post("/api/billings", data);
       }
+      toast.success(editingId ? "Recebimento atualizado" : "Recebimento lançado");
       setShowDialog(false);
       load();
     } catch (e: any) {
-      alert(e.response?.data?.error || "Erro ao salvar");
+      toast.error(e.response?.data?.error || "Erro ao salvar");
     }
   }
 

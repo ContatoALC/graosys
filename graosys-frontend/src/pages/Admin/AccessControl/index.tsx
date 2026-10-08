@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/services/api";
+import { toast } from "sonner";
 
 const MODULES = [
   { key: "contracts", label: "Contratos" },
@@ -45,9 +46,9 @@ export function AdminAccessControlPage() {
     setSaving(userId);
     try {
       await api.patch(`/api/users/${userId}`, { permissions: permissions[userId] });
-      alert("Permissões salvas!");
-    } catch (e) {
-      console.error(e);
+      toast.success("Permissões salvas");
+    } catch (e: any) {
+      toast.error(e.response?.data?.error || "Erro ao salvar as permissões");
     } finally {
       setSaving(null);
     }

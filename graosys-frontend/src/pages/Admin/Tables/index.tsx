@@ -23,6 +23,8 @@ import {
 import { api } from "@/services/api";
 import { formatDate } from "@/lib/utils";
 import { useForm } from "react-hook-form";
+import { useConfirm } from "@/contexts/ConfirmContext";
+import { toast } from "sonner";
 
 interface TableForm {
   name: string;
@@ -32,6 +34,7 @@ interface TableForm {
 }
 
 export function AdminTablesPage() {
+  const confirm = useConfirm();
   const [tables, setTables] = useState<any[]>([]);
   const [showDialog, setShowDialog] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -65,16 +68,18 @@ export function AdminTablesPage() {
       } else {
         await api.post("/api/product-tables", data);
       }
+      toast.success(editingId ? "Mesa atualizada" : "Mesa criada");
       setShowDialog(false);
       load();
     } catch (e: any) {
-      alert(e.response?.data?.error || "Erro ao salvar");
+      toast.error(e.response?.data?.error || "Erro ao salvar");
     }
   }
 
   async function del(id: string) {
-    if (!confirm("Remover mesa?")) return;
+    if (!(await confirm({ title: "Remover mesa?", confirmText: "Remover", destructive: true }))) return;
     await api.delete(`/api/product-tables/${id}`);
+    toast.success("Mesa removida");
     load();
   }
 
