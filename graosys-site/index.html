@@ -356,6 +356,16 @@
       margin-bottom: 44px;
     }
 
+    /* Vídeo de demonstração: só baixa quando a pessoa dá play (preload="none"). */
+    .demo-video {
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: #0b0b0b;
+    }
+
     .section-head h2 {
       font-size: clamp(1.6rem, 3vw, 2.3rem);
       font-weight: 700;
@@ -651,6 +661,7 @@
         GraoSys
       </a>
       <div class="nav-links">
+        <a href="#demo">Demonstração</a>
         <a href="#quem-somos">Quem somos</a>
         <a href="#recursos">Recursos</a>
         <a href="#diferenciais">Diferenciais</a>
@@ -687,6 +698,19 @@
     <div class="ticker-wrap" aria-hidden="true">
       <div class="ticker" id="ticker"></div>
     </div>
+
+    <section id="demo" class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">Demonstração</div>
+        <h2>Veja o GraoSys em 2 minutos</h2>
+        <p>Do cadastro do cliente pelo CNPJ ao recebimento da comissão: um passeio rápido pelo sistema.</p>
+      </div>
+      <video class="demo-video" controls preload="none" playsinline poster="/media/graosys-demo-poster.jpg"
+        aria-label="Vídeo de demonstração do GraoSys">
+        <source src="/media/graosys-demo.mp4" type="video/mp4" />
+        Seu navegador não reproduz vídeo. <a href="/media/graosys-demo.mp4">Baixe a demonstração</a>.
+      </video>
+    </section>
 
     <section id="recursos" class="wrap">
       <div class="section-head">
