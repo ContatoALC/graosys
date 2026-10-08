@@ -5,10 +5,13 @@ import { pickFields } from "../../utils/pickFields";
 import { User } from "../entities/User";
 import { ContractBroker } from "../entities/ContractBroker";
 import { BrokerCommissionRate } from "../entities/BrokerCommissionRate";
-import { currentRates } from "../../services/contractBrokers";
+import { contractsOverLimit, currentRates, overLimitMessage } from "../../services/contractBrokers";
 
 const BROKER_ALLOWED_FIELDS: (keyof Broker)[] = ["name", "code", "cnpj_cpf", "email", "phone", "active", "user_id"];
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+// Erro de regra que desfaz a transação e vira resposta 400.
+class OverLimit extends Error {}
 
 // Valida o código (único na corretora) e o vínculo com usuário; devolve mensagem de erro ou null.
 async function validateLinks(req: Request, data: Partial<Broker>, brokerId?: string): Promise<string | null> {
@@ -109,15 +112,29 @@ export class BrokerController {
     const repo = AppDataSource.getRepository(BrokerCommissionRate);
     const same = await repo.findOne({ where: { tenant_id: req.user.tenant_id, broker_id: broker.id, valid_from: validFrom } });
     if (same) return res.status(400).json({ error: "Já existe um % com início nesta data. Exclua-o antes de lançar outro." });
-    const rate = await repo.save(repo.create({ tenant_id: req.user.tenant_id, broker_id: broker.id, percent, valid_from: validFrom, created_by_name: req.user.name }));
-    return res.status(201).json({ ...rate, percent: Number(rate.percent) });
+    // Grava e confere na mesma transação: se algum contrato já lançado passaria de 100%, desfaz.
+    const result = await AppDataSource.transaction(async (tx) => {
+      const r = tx.getRepository(BrokerCommissionRate);
+      const rate = await r.save(r.create({ tenant_id: req.user.tenant_id, broker_id: broker.id, percent, valid_from: validFrom, created_by_name: req.user.name }));
+      const over = await contractsOverLimit(tx, req.user.tenant_id, broker.id, validFrom);
+      if (over.length) throw new OverLimit(overLimitMessage(over));
+      return rate;
+    }).catch((e) => (e instanceof OverLimit ? e : Promise.reject(e)));
+    if (result instanceof OverLimit) return res.status(400).json({ error: result.message });
+    return res.status(201).json({ ...result, percent: Number(result.percent) });
   }
 
   async deleteRate(req: Request, res: Response) {
     const repo = AppDataSource.getRepository(BrokerCommissionRate);
     const rate = await repo.findOne({ where: { id: req.params.rateId, broker_id: req.params.id, tenant_id: req.user.tenant_id } });
     if (!rate) return res.status(404).json({ error: "Vigência não encontrada" });
-    await repo.remove(rate);
+    // Sem esta vigência, os contratos do período passam a usar a anterior: confere o limite antes de confirmar.
+    const result = await AppDataSource.transaction(async (tx) => {
+      await tx.getRepository(BrokerCommissionRate).remove(rate);
+      const over = await contractsOverLimit(tx, req.user.tenant_id, rate.broker_id, rate.valid_from);
+      if (over.length) throw new OverLimit(overLimitMessage(over));
+    }).catch((e) => (e instanceof OverLimit ? e : Promise.reject(e)));
+    if (result instanceof OverLimit) return res.status(400).json({ error: result.message });
     return res.status(204).send();
   }
 }

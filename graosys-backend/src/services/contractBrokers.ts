@@ -17,6 +17,35 @@ export const RATE_AT = (brokerCol: string, dateExpr: string) => `(
    WHERE r.broker_id = ${brokerCol} AND r.valid_from <= ${dateExpr}
    ORDER BY r.valid_from DESC, r.created_at DESC LIMIT 1)`;
 
+// Contratos (não cancelados) do broker, da data em diante e sem % próprio, cuja soma dos % dos brokers passa de 100%.
+// Usada para barrar uma vigência nova ou excluída que mudaria contratos já fechados para além do limite.
+export async function contractsOverLimit(tx: EntityManager, tenantId: string, brokerId: string, fromDate: string) {
+  const D = `COALESCE(NULLIF(c.contract_emission_date, ''), to_char(c.created_at, 'YYYY-MM-DD'))`;
+  const rows: { number_contract: string; total: string }[] = await tx.query(
+    `WITH affected AS (
+       SELECT DISTINCT c.id, c.number_contract, ${D} AS d
+         FROM grain_contracts c
+         JOIN contract_brokers cb ON cb.contract_id = c.id AND cb.tenant_id = c.tenant_id
+        WHERE c.tenant_id = $1 AND cb.broker_id = $2 AND cb.commission_percent IS NULL AND ${D} >= $3
+          AND COALESCE(c.status->>'status_current', '') <> 'Cancelado'
+     )
+     SELECT a.number_contract, sum(COALESCE(cb.commission_percent, ${RATE_AT("cb.broker_id", "a.d")}, 0)) AS total
+       FROM affected a
+       JOIN contract_brokers cb ON cb.contract_id = a.id AND cb.tenant_id = $1
+      GROUP BY a.id, a.number_contract
+     HAVING sum(COALESCE(cb.commission_percent, ${RATE_AT("cb.broker_id", "a.d")}, 0)) > 100.000001
+      ORDER BY a.number_contract
+      LIMIT 6`,
+    [tenantId, brokerId, fromDate]
+  );
+  return rows.map((r) => ({ number_contract: r.number_contract, total: Number(r.total) }));
+}
+
+export function overLimitMessage(list: { number_contract: string; total: number }[]): string {
+  const shown = list.slice(0, 5).map((r) => `${r.number_contract} (${r.total.toLocaleString("pt-BR")}%)`).join(", ");
+  return `Os brokers passariam de 100% da comissão em contrato(s) já lançado(s): ${shown}${list.length > 5 ? " e outros" : ""}. Ajuste os brokers desses contratos antes.`;
+}
+
 // % vigente de cada broker da corretora numa data (padrão: hoje).
 export async function currentRates(tenantId: string, date = today()): Promise<Map<string, number>> {
   const rows = await AppDataSource.query(

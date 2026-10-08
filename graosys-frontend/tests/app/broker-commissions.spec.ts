@@ -74,4 +74,67 @@ test.describe("Comissões de brokers", () => {
     await expect(ranking).toContainText("1.000,00");
     await expect(ranking.getByRole("cell").nth(1)).toHaveText("3");
   });
+
+  test("dois brokers no mesmo contrato: cada um recebe o seu % sobre a comissão, liberado pelo que a corretora recebeu", async () => {
+    const id = uid();
+    const api = await adminApi();
+    const a = await post(api, "/api/brokers", { name: `Dois A ${id}`, code: `DA${id}` });
+    const b = await post(api, "/api/brokers", { name: `Dois B ${id}`, code: `DB${id}` });
+    await post(api, `/api/brokers/${a.id}/rates`, { percent: 20, valid_from: "2024-01-01" });
+    await post(api, `/api/brokers/${b.id}/rates`, { percent: 10, valid_from: "2024-01-01" });
+    const number = `DUO-${id}`;
+    // 1000 sc × R$ 100, 1% do vendedor → R$ 1.000 de comissão da corretora
+    await post(api, "/api/contracts", contractPayload(number, {
+      contract_emission_date: "2026-10-01",
+      brokers: [{ broker_id: a.id, commission_percent: null }, { broker_id: b.id, commission_percent: null }],
+    }));
+    const row = async (brokerId: string) => {
+      const s = await (await api.get(`/api/broker-portal/summary?broker_id=${brokerId}`)).json();
+      return s.contracts.find((c: any) => c.number_contract === number);
+    };
+    expect(await row(a.id)).toMatchObject({ percent: 20, broker_commission: 200, released: 0, pending: 200 });
+    expect(await row(b.id)).toMatchObject({ percent: 10, broker_commission: 100, released: 0, pending: 100 });
+
+    const receipt = { number_contract: number, number_broker: `DA${id}`, product_name: "Soja E2E", year: "2026", status: "received", receipt_date: "2026-10-05" };
+    await post(api, "/api/billings", { ...receipt, total_service_value: 400 });
+    expect(await row(a.id)).toMatchObject({ released: 80, pending: 120 });
+    expect(await row(b.id)).toMatchObject({ released: 40, pending: 60 });
+
+    await post(api, "/api/billings", { ...receipt, total_service_value: 600 });
+    expect(await row(a.id)).toMatchObject({ released: 200, pending: 0 });
+    expect(await row(b.id)).toMatchObject({ released: 100, pending: 0 });
+
+    // Vigência nova vale só para a frente: o contrato de outubro continua com 20%
+    await post(api, `/api/brokers/${a.id}/rates`, { percent: 30, valid_from: "2026-11-01" });
+    expect(await row(a.id)).toMatchObject({ percent: 20, broker_commission: 200 });
+  });
+
+  test("vigência retroativa (nova ou excluída) não deixa os brokers de um contrato passarem de 100%", async () => {
+    const id = uid();
+    const api = await adminApi();
+    const x = await post(api, "/api/brokers", { name: `Lim X ${id}`, code: `LX${id}` });
+    const y = await post(api, "/api/brokers", { name: `Lim Y ${id}`, code: `LY${id}` });
+    await post(api, `/api/brokers/${x.id}/rates`, { percent: 80, valid_from: "2024-01-01" });
+    await post(api, `/api/brokers/${y.id}/rates`, { percent: 30, valid_from: "2024-01-01" });
+    const lowered = await post(api, `/api/brokers/${y.id}/rates`, { percent: 10, valid_from: "2026-09-01" });
+    const number = `LIM-${id}`;
+    await post(api, "/api/contracts", contractPayload(number, {
+      contract_emission_date: "2026-10-01",
+      brokers: [{ broker_id: x.id, commission_percent: null }, { broker_id: y.id, commission_percent: null }],
+    })); // 80% + 10% = 90%
+
+    // Nova vigência com início antes do contrato: 80% + 50% = 130% → recusada, nada gravado
+    const retro = await api.post(`/api/brokers/${y.id}/rates`, { data: { percent: 50, valid_from: "2026-09-15" } });
+    expect(retro.status()).toBe(400);
+    expect((await retro.json()).error).toContain(`${number} (130%)`);
+    expect((await (await api.get(`/api/brokers/${y.id}/rates`)).json()).map((r: any) => r.valid_from)).not.toContain("2026-09-15");
+
+    // Excluir a vigência de 10% faria o contrato voltar para 30% (110%) → recusada
+    const del = await api.delete(`/api/brokers/${y.id}/rates/${lowered.id}`);
+    expect(del.status()).toBe(400);
+    expect((await del.json()).error).toContain(`${number} (110%)`);
+
+    // Depois do contrato, pode
+    expect((await api.post(`/api/brokers/${y.id}/rates`, { data: { percent: 50, valid_from: "2026-11-01" } })).status()).toBe(201);
+  });
 });
