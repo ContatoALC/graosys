@@ -21,6 +21,7 @@ Sem backend dá para rodar só `npm run test:public`.
 | `app/contract-email.spec.ts` | Envio do contrato: grupos de e-mail de vendedor e comprador digitados na tela de envio, validação e gravação no contrato; e-mails do cadastro do cliente entram no contrato e são sugeridos no envio. |
 | `app/contract-pdf.spec.ts` | PDF do contrato pela linha de Contratos e de Execução (via do vendedor/comprador em nova aba); a API só serve contratos da própria corretora. |
 | `app/contract-workflow.spec.ts` | Fluxo por departamento: Contratos → Execução (devolver com motivo, aprovar) → envio; permissão pela etapa; cancelar/reabrir; fluxo simplificado; filas e histórico nas telas. Use `approvedContract()` para ter um contrato já na fila de envio. |
+| `app/nfse.spec.ts` | Dados para NFS-e na Fila da Cobrança: uma nota por parte que paga comissão, tomador do cadastro (aviso quando incompleto), copiar para a área de transferência e registrar Nº RPS/NFS-e no recebimento. |
 | `app/billing.spec.ts` | Recebimentos mudam o status de cobrança do contrato (A Faturar → A Receber → Parcial → Recebido; Em Atraso); cálculo do líquido. |
 | `app/broker-commissions.spec.ts` | Tabela de % por data do broker, % do contrato, parte liberada pelo que a corretora recebeu, filtro de período e produtividade. |
 | `app/permissions.spec.ts` | Usuário comum: menu, telas restritas redirecionam, API devolve 403; liberar módulo pelo Controle de Acesso. |

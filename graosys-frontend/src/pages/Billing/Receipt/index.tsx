@@ -7,6 +7,8 @@ import { FormDatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ContractStageBadge } from "@/components/ContractStageBadge";
+import { useAuth } from "@/contexts/AuthContext";
+import { NfseDialog } from "./NfseDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -43,6 +45,9 @@ export function ReceiptPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   // Fila da Cobrança: contratos enviados ao cliente com comissão a receber.
   const [queue, setQueue] = useState<any[]>([]);
+  const [nfseContract, setNfseContract] = useState<string | null>(null);
+  const { user } = useAuth();
+  const canEditBilling = user?.role === "admin" || user?.role === "superadmin" || !!user?.permissions?.billing?.includes("edit");
 
   const { register, handleSubmit, reset, control, watch, setValue } = useForm<BillingForm>({
     defaultValues: { status: "pending", year: new Date().getFullYear().toString() },
@@ -193,7 +198,10 @@ export function ReceiptPage() {
                       <TableCell className="text-right">{formatCurrency(c.commission_contract)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(c.billing_received)}</TableCell>
                       <TableCell className="text-right">
-                        <Button size="sm" variant="outline" onClick={() => openForContract(c)}>Lançar recebimento</Button>
+                        <div className="flex justify-end gap-2">
+                          <Button size="sm" variant="outline" onClick={() => setNfseContract(c.id)}>Dados para NFS-e</Button>
+                          <Button size="sm" variant="outline" onClick={() => openForContract(c)}>Lançar recebimento</Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -265,6 +273,8 @@ export function ReceiptPage() {
       </div>
 
       {/* Dialog Form */}
+      <NfseDialog contractId={nfseContract} canEdit={canEditBilling} onClose={() => setNfseContract(null)} onSaved={load} />
+
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>

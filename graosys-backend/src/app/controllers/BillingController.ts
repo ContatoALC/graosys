@@ -3,6 +3,7 @@ import { AppDataSource } from "../../database/data-source";
 import { Billing } from "../entities/Billing";
 import { pickFields } from "../../utils/pickFields";
 import { syncBillingStage } from "../../services/contractWorkflow";
+import { nfseData } from "../../services/nfseData";
 
 const ALLOWED_FIELDS: (keyof Billing)[] = [
   "number_contract", "number_broker", "product_name", "year", "receipt_date",
@@ -82,6 +83,13 @@ export class BillingController {
     await billingRepo.remove(billing);
     await syncBillingStage(req.user.tenant_id, [number], req.user.name);
     return res.status(204).send();
+  }
+
+  // Dados do contrato para emitir a NFS-e da comissão no site da prefeitura (copiar e colar).
+  async nfse(req: Request, res: Response) {
+    const data = await nfseData(req.user.tenant_id, req.params.contractId);
+    if (!data) return res.status(404).json({ error: "Contrato não encontrado" });
+    return res.json(data);
   }
 
   async getSummary(req: Request, res: Response) {

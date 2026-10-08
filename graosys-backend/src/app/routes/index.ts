@@ -102,6 +102,7 @@ router.delete("/api/contracts/:id", requireRole("admin"), contract.delete);
 
 // Recebimentos (Cobrança)
 router.get("/api/billings/summary", requirePermission("billing", "view"), billing.getSummary);
+router.get("/api/billings/nfse/:contractId", requirePermission("billing", "view"), billing.nfse);
 router.get("/api/billings", requirePermission("billing", "view"), billing.getAll);
 router.get("/api/billings/:id", requirePermission("billing", "view"), billing.getById);
 router.get("/api/billings/contract/:number_contract", requirePermission("billing", "view"), billing.getByNumberContract);
