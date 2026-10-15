@@ -4,6 +4,7 @@ import { AppDataSource } from "../../database/data-source";
 import { Tenant } from "../entities/Tenant";
 import { GrainContract } from "../entities/GrainContract";
 import { ContractTemplate } from "../entities/ContractTemplate";
+import { Product } from "../entities/Product";
 import { generateContractPdf, getPdfFixations } from "../../services/contractPdf";
 import {
   FIELD_LABELS, LANGUAGES, MAX_CLAUSES, MAX_CLAUSE_BODY, TEXTS, TemplateLanguage, TemplateVisual, VARIABLES,
@@ -171,7 +172,11 @@ export class ContractTemplateController {
       await repo.update({ id: t.id, tenant_id }, { active: false });
       return res.json({ archived: true });
     }
-    await repo.delete({ id: t.id, tenant_id });
+    // Produtos que sugeriam este modelo voltam para o padrão.
+    await AppDataSource.transaction(async (tx) => {
+      await tx.getRepository(Product).update({ tenant_id, template_id: t.id }, { template_id: null });
+      await tx.getRepository(ContractTemplate).delete({ id: t.id, tenant_id });
+    });
     return res.json({ archived: false });
   }
 

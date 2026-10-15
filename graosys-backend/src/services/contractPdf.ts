@@ -179,6 +179,14 @@ export function variableValues(contract: GrainContract, tenant: Tenant, lang: Te
   };
 }
 
+// Endereço da corretora numa linha: "Rua X, 123 - Sala 4 - Centro - Cidade/UF - CEP 00000-000".
+export function tenantAddressLine(tenant: Tenant): string {
+  const street = [tenant.address, tenant.number].map((v) => (v ?? "").trim()).filter(Boolean).join(", ");
+  const city = [tenant.city, tenant.state].map((v) => (v ?? "").trim()).filter(Boolean).join("/");
+  const zip = (tenant.zip_code ?? "").trim();
+  return [street, tenant.complement?.trim(), tenant.district?.trim(), city, zip && `CEP ${zip}`].filter(Boolean).join(" - ");
+}
+
 export const roleLabel = (role: ContractPdfRole, lang: TemplateLanguage = "pt-BR") => TEXTS[lang].roles[role];
 
 export function contractPdfFilename(contract: GrainContract, role: ContractPdfRole, lang: TemplateLanguage = "pt-BR"): string {
@@ -216,6 +224,9 @@ export async function generateContractPdf(
   ]);
 
   const align = template.logo_data ? template.logo_position : "left";
+  // Linhas sob o nome da corretora: CNPJ e, se o modelo pedir, o endereço.
+  const address = template.show_address ? tenantAddressLine(tenant) : "";
+  const headerLines = [tenant.cnpj ? `${TEXTS[lang].cnpj} ${insertMaskInCnpj(tenant.cnpj)}` : "", ...(address ? [address] : [])];
   const docDefinition = {
     pageSize: "A4",
     pageMargins: [40, 50, 40, 50],
@@ -236,7 +247,7 @@ export async function generateContractPdf(
         ? [{ image: template.logo_data, width: template.logo_width, alignment: template.logo_position, margin: [0, 0, 0, 12] }]
         : []),
       { text: tenant.name, style: "title", alignment: align },
-      { text: tenant.cnpj ? `CNPJ ${insertMaskInCnpj(tenant.cnpj)}` : "", color: "#555555", margin: [0, 0, 0, 12], alignment: align },
+      ...headerLines.map((line, i) => ({ text: line, color: "#555555", alignment: align, ...(i === headerLines.length - 1 ? { margin: [0, 0, 0, 12] } : {}) })),
       { text: `${template.title} - ${roleLabel(role, lang).toUpperCase()}`, style: "subtitle" },
       ...(rows.length > 0
         ? [{

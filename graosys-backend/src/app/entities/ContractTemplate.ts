@@ -34,6 +34,9 @@ export class ContractTemplate {
   @Column({ default: true })
   show_fixations: boolean;
 
+  @Column({ default: false })
+  show_address: boolean; // endereço da corretora no cabeçalho do PDF
+
   @Column({ type: "jsonb", default: [] })
   clauses: TemplateClause[];
 

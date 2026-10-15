@@ -3,10 +3,21 @@ import { AppDataSource } from "../../database/data-source";
 import { Product } from "../entities/Product";
 import { ProductTable } from "../entities/ProductTable";
 import { pickFields } from "../../utils/pickFields";
+import { ContractTemplate } from "../entities/ContractTemplate";
 
 const PRODUCT_ALLOWED_FIELDS: (keyof Product)[] = [
-  "product_type", "name", "commission_seller", "type_commission_seller", "quality", "observation",
+  "product_type", "name", "commission_seller", "type_commission_seller", "quality", "observation", "template_id",
 ];
+
+// Modelo do produto precisa ser da corretora; vazio vira nulo. Arquivado só fica se já era o do produto.
+async function validateTemplate(tenantId: string, input: Partial<Product>, current?: string | null): Promise<string | null> {
+  if (input.template_id === undefined) return null;
+  if (!input.template_id) { input.template_id = null; return null; }
+  const t = await AppDataSource.getRepository(ContractTemplate).findOne({ where: { id: String(input.template_id), tenant_id: tenantId }, select: ["id", "active"] });
+  if (!t) return "Modelo de contrato não encontrado";
+  if (!t.active && t.id !== current) return "Este modelo de contrato está arquivado";
+  return null;
+}
 
 const PRODUCT_TABLE_ALLOWED_FIELDS: (keyof ProductTable)[] = ["name", "product", "crop", "description", "prices"];
 
@@ -15,7 +26,10 @@ export class ProductController {
     const productRepo = AppDataSource.getRepository(Product);
     const existing = await productRepo.findOne({ where: { product_type: req.body.product_type, tenant_id: req.user.tenant_id } });
     if (existing) return res.status(400).json({ error: "Produto com este código já existe" });
-    const product = productRepo.create({ ...pickFields<Product>(req.body, PRODUCT_ALLOWED_FIELDS), tenant_id: req.user.tenant_id });
+    const input = pickFields<Product>(req.body, PRODUCT_ALLOWED_FIELDS);
+    const templateError = await validateTemplate(req.user.tenant_id, input);
+    if (templateError) return res.status(400).json({ error: templateError });
+    const product = productRepo.create({ ...input, tenant_id: req.user.tenant_id });
     await productRepo.save(product);
     return res.status(201).json(product);
   }
@@ -37,7 +51,10 @@ export class ProductController {
     const productRepo = AppDataSource.getRepository(Product);
     const product = await productRepo.findOne({ where: { id: req.params.id, tenant_id: req.user.tenant_id } });
     if (!product) return res.status(404).json({ error: "Produto não encontrado" });
-    Object.assign(product, pickFields<Product>(req.body, PRODUCT_ALLOWED_FIELDS));
+    const input = pickFields<Product>(req.body, PRODUCT_ALLOWED_FIELDS);
+    const templateError = await validateTemplate(req.user.tenant_id, input, product.template_id);
+    if (templateError) return res.status(400).json({ error: templateError });
+    Object.assign(product, input);
     await productRepo.save(product);
     return res.json(product);
   }

@@ -136,19 +136,4 @@ test.describe("Dados para templates de contrato", () => {
     expect(Number(fixations[1].ppe)).toBeCloseTo(385.81, 1);
     await api.dispose();
   });
-
-  test("endereço da corretora é salvo em Modelos de contrato", async ({ page }) => {
-    const city = `Cidade ${uid()}`;
-    await page.goto("/admin/pdf-layout");
-    await expect(page.getByLabel("Cidade")).toBeEditable();
-    await page.getByLabel("Logradouro").fill("Rua dos Testes");
-    await page.getByLabel("Cidade").fill(city);
-    await page.getByLabel("UF").fill("PR");
-    await page.getByRole("button", { name: "Salvar endereço" }).click();
-    await expect(page.getByText("Endereço salvo")).toBeVisible();
-
-    await page.reload();
-    await expect(page.getByLabel("Cidade")).toHaveValue(city);
-    await expect(page.getByLabel("UF")).toHaveValue("PR");
-  });
 });

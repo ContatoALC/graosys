@@ -19,6 +19,7 @@ export interface TemplateContent {
   title: string;
   fields: TemplateField[];
   show_fixations: boolean;
+  show_address?: boolean; // ausente nos textos congelados antes da opção existir
   clauses: TemplateClause[];
   closing_text: string;
   signatures: string[];
@@ -84,12 +85,14 @@ export const TEXTS = {
     closing: "Solicitamos carimbar, assinar e devolver esta confirmação por e-mail.",
     signatures: ["Assinatura / Carimbo", "Data"],
     roles: { Vendedor: "Vendedor", Comprador: "Comprador" },
+    cnpj: "CNPJ",
   },
   en: {
     title: "CONTRACT CONFIRMATION",
     closing: "Please sign, stamp and return this confirmation by e-mail.",
     signatures: ["Signature / Stamp", "Date"],
     roles: { Vendedor: "Seller", Comprador: "Buyer" },
+    cnpj: "Tax ID (CNPJ)",
   },
 } as const;
 
@@ -105,6 +108,7 @@ export function defaultContent(language: TemplateLanguage): TemplateContent {
     title: t.title,
     fields: FIELD_KEYS.map((key) => ({ key, visible: true, label: null })),
     show_fixations: true,
+    show_address: false,
     clauses: [],
     closing_text: t.closing,
     signatures: [...t.signatures],
@@ -118,7 +122,7 @@ export const DEFAULT_VISUAL: TemplateVisual = {
 export function contentOf(t: ContractTemplate): TemplateContent {
   return {
     template_id: t.id, name: t.name, language: t.language as TemplateLanguage, title: t.title, fields: t.fields,
-    show_fixations: t.show_fixations, clauses: t.clauses, closing_text: t.closing_text, signatures: t.signatures,
+    show_fixations: t.show_fixations, show_address: t.show_address, clauses: t.clauses, closing_text: t.closing_text, signatures: t.signatures,
   };
 }
 
@@ -152,6 +156,7 @@ export function normalizeContent(body: any, base: TemplateContent): { content?: 
   }
   if (body.title !== undefined) c.title = str(body.title, 120) || TEXTS[c.language].title;
   if (body.show_fixations !== undefined) c.show_fixations = Boolean(body.show_fixations);
+  if (body.show_address !== undefined) c.show_address = Boolean(body.show_address);
   if (body.closing_text !== undefined) c.closing_text = str(body.closing_text, 2000);
 
   if (body.fields !== undefined) {

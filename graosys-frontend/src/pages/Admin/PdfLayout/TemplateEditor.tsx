@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { api } from "@/services/api";
 import { toast } from "sonner";
 import { LANGUAGE_LABELS } from ".";
@@ -29,7 +30,7 @@ interface Field { key: string; visible: boolean; label: string | null }
 interface Clause { id: string; title: string; body: string }
 interface Template {
   id: string; name: string; language: Lang; is_default: boolean; active: boolean; contracts_count: number;
-  title: string; fields: Field[]; show_fixations: boolean; clauses: Clause[]; closing_text: string; signatures: string[];
+  title: string; fields: Field[]; show_fixations: boolean; show_address: boolean; clauses: Clause[]; closing_text: string; signatures: string[];
   logo_data: string | null; logo_position: string; logo_width: number;
   watermark_data: string | null; watermark_opacity: number; watermark_enabled: boolean;
 }
@@ -38,6 +39,70 @@ interface Catalog {
   variables: { key: string; label: string }[];
   defaults: Record<Lang, { title: string; closing_text: string; signatures: string[] }>;
   limits: { clauses: number; clause_body: number };
+}
+
+// Mesmo formato da linha do PDF (contractPdf.tenantAddressLine).
+function addressLine(t: Record<string, string | null | undefined>) {
+  const v = (k: string) => (t?.[k] ?? "").trim();
+  const street = [v("address"), v("number")].filter(Boolean).join(", ");
+  const city = [v("city"), v("state")].filter(Boolean).join("/");
+  return [street, v("complement"), v("district"), city, v("zip_code") && `CEP ${v("zip_code")}`].filter(Boolean).join(" - ");
+}
+
+const ADDRESS_FIELDS = [
+  { key: "address", label: "Logradouro", span: "col-span-2" },
+  { key: "number", label: "Número" },
+  { key: "complement", label: "Complemento" },
+  { key: "district", label: "Bairro", span: "col-span-2" },
+  { key: "zip_code", label: "CEP" },
+  { key: "city", label: "Cidade" },
+  { key: "state", label: "UF", maxLength: 2 },
+] as const;
+type Address = Record<(typeof ADDRESS_FIELDS)[number]["key"], string>;
+
+// Endereço é da corretora (vale para todos os modelos); grava no cadastro dela.
+function TenantAddressDialog({ open, value, onClose, onSaved }: { open: boolean; value: Address; onClose: () => void; onSaved: (a: Address) => void }) {
+  const [form, setForm] = useState(value);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => { if (open) setForm(value); }, [open]);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.patch("/api/tenant", form);
+      toast.success("Endereço da corretora salvo");
+      onSaved(form);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Erro ao salvar o endereço");
+    } finally { setSaving(false); }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Endereço da corretora</DialogTitle>
+          <DialogDescription>Vale para todos os modelos que mostram o endereço no cabeçalho.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={save} className="space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            {ADDRESS_FIELDS.map((f) => (
+              <div key={f.key} className={`space-y-1 ${"span" in f ? f.span : ""}`}>
+                <Label htmlFor={`tenant-${f.key}`}>{f.label}</Label>
+                <Input id={`tenant-${f.key}`} maxLength={"maxLength" in f ? f.maxLength : undefined} value={form[f.key]}
+                  onChange={(e) => setForm({ ...form, [f.key]: e.target.value })} />
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button type="submit" disabled={saving}>{saving ? "Salvando..." : "Salvar endereço"}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 const newId = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()));
@@ -94,12 +159,17 @@ export function AdminContractTemplateEditorPage() {
   const [previewing, setPreviewing] = useState(false);
   const [sampleNumber, setSampleNumber] = useState("");
   const [role, setRole] = useState("Vendedor");
+  const [tenantAddress, setTenantAddress] = useState<Address | null>(null);
+  const [editingAddress, setEditingAddress] = useState(false);
   // Último campo de texto com foco: é onde o botão de variável insere o {{...}}.
   const target = useRef<{ el: HTMLInputElement | HTMLTextAreaElement; set: (v: string) => void } | null>(null);
 
   useEffect(() => {
     api.get(`/api/contract-templates/${id}`).then((r) => setTpl(r.data)).catch((e) => toast.error(e.response?.data?.error || "Modelo não encontrado"));
     api.get("/api/contract-templates/catalog").then((r) => setCatalog(r.data)).catch(console.error);
+    api.get("/api/tenant").then((r) => {
+      setTenantAddress(Object.fromEntries(ADDRESS_FIELDS.map((f) => [f.key, r.data?.[f.key] ?? ""])) as Address);
+    }).catch(console.error);
   }, [id]);
 
   useEffect(() => {
@@ -113,7 +183,7 @@ export function AdminContractTemplateEditorPage() {
 
   function payload(t: Template) {
     const body: Record<string, unknown> = {
-      name: t.name, language: t.language, title: t.title, fields: t.fields, show_fixations: t.show_fixations,
+      name: t.name, language: t.language, title: t.title, fields: t.fields, show_fixations: t.show_fixations, show_address: t.show_address,
       clauses: t.clauses, closing_text: t.closing_text, signatures: t.signatures,
       logo_position: t.logo_position, logo_width: t.logo_width, watermark_opacity: t.watermark_opacity, watermark_enabled: t.watermark_enabled,
     };
@@ -256,6 +326,23 @@ export function AdminContractTemplateEditorPage() {
                 <Label htmlFor="tpl-title">Título do documento</Label>
                 <Input id="tpl-title" value={tpl.title} onChange={(e) => update({ title: e.target.value })} />
                 <p className="text-xs text-muted-foreground">No PDF sai seguido da via: "{tpl.title} - {tpl.language === "en" ? "SELLER" : "VENDEDOR"}".</p>
+              </div>
+              <div className="space-y-2 border-t pt-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" className="h-4 w-4" checked={tpl.show_address} onChange={(e) => update({ show_address: e.target.checked })} />
+                  Mostrar o endereço da corretora no cabeçalho do PDF
+                </label>
+                <div className="flex items-center justify-between gap-3 rounded-md bg-muted/40 px-3 py-2 text-sm">
+                  <span>{tenantAddress === null ? "..." : addressLine(tenantAddress) || <span className="text-muted-foreground">Endereço da corretora não cadastrado.</span>}</span>
+                  <Button type="button" variant="outline" size="sm" disabled={tenantAddress === null} onClick={() => setEditingAddress(true)}>
+                    {tenantAddress && addressLine(tenantAddress) ? "Editar endereço" : "Cadastrar endereço"}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">O endereço é da corretora e vale para todos os modelos.</p>
+                {tenantAddress && (
+                  <TenantAddressDialog open={editingAddress} value={tenantAddress} onClose={() => setEditingAddress(false)}
+                    onSaved={(a) => { setTenantAddress(a); setEditingAddress(false); if (tpl.show_address) setTpl((t) => (t ? { ...t } : t)); }} />
+                )}
               </div>
             </CardContent></Card>
           )}

@@ -89,6 +89,8 @@ export function ContractFormPage() {
   // Fluxo simplificado: o contrato já nasce pronto para envio, sem passar pela análise.
   const [simpleFlow, setSimpleFlow] = useState(false);
   const sendAfterSave = useRef(false);
+  // O usuário escolheu o modelo na mão: trocar o produto depois não sobrescreve.
+  const templateTouched = useRef(false);
   const { user } = useAuth();
   // Último broker escolhido no "Nº Corretor/Broker": trocar a escolha troca o broker no quadro de comissão.
   const lastNumber = useRef("");
@@ -197,6 +199,11 @@ export function ContractFormPage() {
       setValue("product", p.product_type);
       setValue("name_product", p.name);
       if (!isEditing) {
+        // Modelo sugerido pelo produto (só se ainda estiver ativo); sem sugestão, volta ao padrão.
+        if (!templateTouched.current) {
+          const suggested = templates.find((t) => t.id === p.template_id && t.active);
+          setValue("template_id", suggested && !suggested.is_default ? suggested.id : "");
+        }
         setValue("type_commission_seller", p.type_commission_seller || "");
         setValue("commission_seller", p.commission_seller || "");
         setValue("quality", p.quality || "");
@@ -330,7 +337,7 @@ export function ContractFormPage() {
               {templateOptions.length > 0 && (
                 <div className="space-y-2">
                   <Label htmlFor="template_id">Modelo do contrato (PDF)</Label>
-                  <select id="template_id" key={templates.length} className={selectClass} {...register("template_id")}>
+                  <select id="template_id" key={templates.length} className={selectClass} {...register("template_id", { onChange: () => { templateTouched.current = true; } })}>
                     <option value="">Padrão da corretora{defaultTemplate ? ` (${defaultTemplate.name})` : ""}</option>
                     {templateOptions.map((t) => (
                       <option key={t.id} value={t.id}>{t.name} · {t.language === "en" ? "Inglês" : "Português"}{t.active ? "" : " (arquivado)"}</option>

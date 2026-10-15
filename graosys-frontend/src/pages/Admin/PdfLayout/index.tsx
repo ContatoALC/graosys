@@ -14,67 +14,10 @@ import { formatDate } from "@/lib/utils";
 import { api } from "@/services/api";
 import { toast } from "sonner";
 
-const COMPANY_FIELDS = ["address", "number", "complement", "district", "city", "state", "zip_code"] as const;
 const selectClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 export const LANGUAGE_LABELS: Record<string, string> = { "pt-BR": "Português", en: "Inglês" };
 
 interface TemplateRow { id: string; name: string; language: string; is_default: boolean; active: boolean; updated_at: string }
-
-function CompanyAddressCard() {
-  const [company, setCompany] = useState<Record<string, string>>({});
-  // Campos do endereço só liberam depois de carregados: senão o valor que chega da API apaga o que foi digitado.
-  const [loaded, setLoaded] = useState(false);
-  const [message, setMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    api.get("/api/tenant").then((r) => {
-      const next: Record<string, string> = {};
-      for (const k of COMPANY_FIELDS) next[k] = r.data?.[k] ?? "";
-      setCompany(next);
-    }).catch(console.error).finally(() => setLoaded(true));
-  }, []);
-
-  async function save() {
-    setMessage(null); setSaving(true);
-    try {
-      await api.patch("/api/tenant", company);
-      setMessage({ type: "ok", text: "Endereço salvo" });
-    } catch (e: any) {
-      setMessage({ type: "error", text: e.response?.data?.error || "Erro ao salvar o endereço" });
-    } finally { setSaving(false); }
-  }
-  const field = (k: (typeof COMPANY_FIELDS)[number], label: string, className = "", extra: Record<string, unknown> = {}) => (
-    <div className={`space-y-2 ${className}`}>
-      <Label htmlFor={`company-${k}`}>{label}</Label>
-      <Input id={`company-${k}`} disabled={!loaded} value={company[k] ?? ""} onChange={(e) => setCompany({ ...company, [k]: e.target.value })} {...extra} />
-    </div>
-  );
-
-  return (
-    <Card className="mt-6 max-w-2xl"><CardContent className="space-y-4 pt-6">
-      <div>
-        <h2 className="text-base font-semibold">Endereço da corretora</h2>
-        <p className="text-xs text-muted-foreground">Usado no cabeçalho dos contratos, por exemplo na linha de cidade e data.</p>
-      </div>
-      <div className="grid grid-cols-3 gap-4">
-        {field("address", "Logradouro", "col-span-2")}
-        {field("number", "Número")}
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        {field("complement", "Complemento")}
-        {field("district", "Bairro")}
-      </div>
-      <div className="grid grid-cols-3 gap-4">
-        {field("zip_code", "CEP")}
-        {field("city", "Cidade")}
-        {field("state", "UF", "", { maxLength: 2 })}
-      </div>
-      {message && <p className={message.type === "ok" ? "text-sm text-green-700" : "text-sm text-destructive"}>{message.text}</p>}
-      <Button onClick={save} disabled={saving || !loaded}>Salvar endereço</Button>
-    </CardContent></Card>
-  );
-}
 
 export function AdminPdfLayoutPage() {
   const navigate = useNavigate();
@@ -174,7 +117,6 @@ export function AdminPdfLayoutPage() {
         </CardContent></Card>
         <p className="mt-2 text-xs text-muted-foreground">O modelo padrão vale para os contratos sem modelo escolhido. Cada contrato pode escolher outro na tela do contrato.</p>
 
-        <CompanyAddressCard />
       </div>
 
       <Dialog open={showNew} onOpenChange={setShowNew}>

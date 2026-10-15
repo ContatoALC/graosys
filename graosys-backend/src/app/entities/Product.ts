@@ -27,6 +27,10 @@ export class Product {
   @Column({ type: "text", nullable: true })
   observation: string;
 
+  // Modelo de contrato que já vem escolhido no contrato novo deste produto; nulo = padrão da corretora.
+  @Column({ type: "varchar", nullable: true })
+  template_id: string | null;
+
   @CreateDateColumn()
   created_at: Date;
 

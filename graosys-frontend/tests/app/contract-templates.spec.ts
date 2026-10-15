@@ -123,6 +123,96 @@ test.describe("Modelos de contrato", () => {
     await api.dispose();
   });
 
+  test("endereço da corretora sai no cabeçalho só nos modelos que marcam a opção", async ({ page }) => {
+    const id = uid();
+    const api = await adminApi();
+    const template = await post(api, "/api/contract-templates", { name: `Com endereço ${id}`, language: "en" });
+
+    // O endereço é da corretora, mas é editado dali mesmo, na aba Geral do modelo
+    await page.goto(`/admin/pdf-layout/${template.id}`);
+    await page.getByRole("button", { name: /(Editar|Cadastrar) endereço/ }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Logradouro").fill("Rua dos Testes");
+    await dialog.getByLabel("Número").fill("100");
+    await dialog.getByLabel("Cidade").fill(`Cidade ${id}`);
+    await dialog.getByLabel("UF").fill("PR");
+    await dialog.getByRole("button", { name: "Salvar endereço" }).click();
+    await expect(page.getByText("Endereço da corretora salvo")).toBeVisible();
+    await expect(page.getByText(`Rua dos Testes, 100 - Cidade ${id}/PR`)).toBeVisible();
+    expect((await (await api.get("/api/tenant")).json()).city).toBe(`Cidade ${id}`);
+
+    await page.getByLabel("Mostrar o endereço da corretora no cabeçalho do PDF").check();
+    await page.getByRole("button", { name: "Salvar modelo" }).click();
+    await expect(page.getByText("Modelo salvo")).toBeVisible();
+
+    const withAddress = await post(api, "/api/contracts", contractPayload(`TPL-END-${id}`, { template_id: template.id }));
+    expect((await contractPdf(api, withAddress.id)).text).toContain("Rua dos Testes, 100");
+    const withoutAddress = await post(api, "/api/contracts", contractPayload(`TPL-SEM-${id}`));
+    expect((await contractPdf(api, withoutAddress.id)).text).not.toContain("Rua dos Testes");
+    await api.dispose();
+  });
+
+  test("produto sugere o modelo no contrato novo; escolha manual prevalece", async ({ page }) => {
+    test.setTimeout(30_000); // cadastro do produto pela tela + contrato novo completo
+    const id = uid();
+    const api = await adminApi();
+    const exportTpl = await post(api, "/api/contract-templates", { name: `Export ${id}`, language: "en" });
+    const domesticTpl = await post(api, "/api/contract-templates", { name: `Interno ${id}`, language: "pt-BR" });
+    await post(api, "/api/brokers", { name: `Broker ${id}`, code: `P${id}` });
+    await post(api, "/api/products", { product_type: `MILHO${id}`, name: `Milho ${id}` }); // sem modelo: padrão
+
+    // Produto com modelo, cadastrado pela tela
+    await page.goto("/admin/products");
+    await page.getByRole("button", { name: "Novo Produto" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.locator('input[name="product_type"]').fill(`SOJA${id}`);
+    await dialog.locator('input[name="name"]').fill(`Soja export ${id}`);
+    await dialog.getByLabel("Modelo de contrato").selectOption({ label: `Export ${id} · Inglês` });
+    await dialog.getByRole("button", { name: "Criar" }).click();
+    await expect(page.getByRole("row", { name: new RegExp(`Soja export ${id}`) })).toContainText(`Export ${id}`);
+
+    const pickProduct = async (name: string) => {
+      await page.locator("form").getByRole("combobox").filter({ hasText: /Selecione o produto|Soja export|Milho/ }).click();
+      // Lista longa no banco de teste: a opção pode estar fora da área visível do select
+      const option = page.getByRole("option", { name });
+      await option.focus();
+      await page.keyboard.press("Enter");
+      await expect(page.getByRole("listbox")).toBeHidden();
+    };
+    const template = page.getByLabel("Modelo do contrato (PDF)");
+
+    // Contrato novo: o produto traz o modelo; outro produto sem modelo volta ao padrão
+    await page.goto("/contracts/new");
+    await pickProduct(`Soja export ${id}`);
+    await expect(template).toHaveValue(exportTpl.id);
+    await pickProduct(`Milho ${id}`);
+    await expect(template).toHaveValue("");
+
+    // Escolha manual: trocar o produto depois não sobrescreve
+    await template.selectOption({ label: `Interno ${id} · Português` });
+    await pickProduct(`Soja export ${id}`);
+    await expect(template).toHaveValue(domesticTpl.id);
+
+    // Registra e o modelo escolhido fica gravado
+    const number = `TPL-PRD-${id}`;
+    await page.getByLabel("Nº Corretor/Broker *").selectOption({ label: `P${id} · Broker ${id}` });
+    await page.locator('input[name="number_contract"]').fill(number);
+    await page.getByPlaceholder("Buscar ou digitar o vendedor").fill("Vendedor E2E");
+    await page.getByPlaceholder("Buscar ou digitar o comprador").fill("Comprador E2E");
+    await page.locator('input[name="crop"]').fill("2025/2026");
+    await page.locator('input[name="quantity"]').fill("1000");
+    await page.locator('input[name="price"]').fill("120.5");
+    await page.getByRole("button", { name: "Registrar Contrato" }).click();
+    await expect(page).toHaveURL(/\/contracts$/);
+    const found = await (await api.get(`/api/contracts?search=${number}`)).json();
+    expect(found.data[0].template_id).toBe(domesticTpl.id);
+
+    // Produto não aceita modelo de outra corretora / inexistente
+    const bad = await api.post("/api/products", { data: { product_type: `X${id}`, name: "X", template_id: "00000000-0000-0000-0000-000000000000" } });
+    expect(bad.status()).toBe(400);
+    await api.dispose();
+  });
+
   test("usuário comum vê a lista para escolher no contrato, mas não edita modelos", async () => {
     const admin = await adminApi();
     const email = `modelo.${uid()}@e2e.test`;
