@@ -9,6 +9,8 @@ const ACTIONS: Record<string, string> = {
   "users.create": "Usuário criado", "users.update": "Usuário editado", "users.delete": "Usuário excluído",
   "product-tables.create": "Mesa criada", "product-tables.update": "Mesa editada", "product-tables.delete": "Mesa excluída",
   "email-settings.update": "E-mail da corretora alterado", "email_settings.test": "Teste de e-mail", "pdf_settings.update": "Layout do PDF alterado",
+  "contract-templates.create": "Modelo de contrato criado", "contract-templates.update": "Modelo de contrato editado", "contract-templates.delete": "Modelo de contrato excluído/arquivado",
+  "contract-templates.duplicate": "Modelo de contrato duplicado", "contract-templates.set_default": "Modelo de contrato padrão alterado",
   "tenant.update": "Dados da corretora alterados", "platform.tenants.delete": "Corretora excluída",
 };
 

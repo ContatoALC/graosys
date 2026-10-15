@@ -18,6 +18,9 @@ const FRIENDLY: Record<string, string> = {
   "auth.logout.create": "",
   "email-settings.test.create": "email_settings.test",
   "pdf-settings.update": "pdf_settings.update",
+  "contract-templates.preview.create": "",
+  "contract-templates.duplicate.create": "contract-templates.duplicate",
+  "contract-templates.default.create": "contract-templates.set_default",
 };
 
 // Grava uma linha por requisição que altera dados, ao final da resposta e antes de liberá-la

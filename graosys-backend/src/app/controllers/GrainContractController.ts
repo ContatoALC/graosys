@@ -9,7 +9,9 @@ import { withBillingStatus } from "../../services/billingStatus";
 import { loadContractBrokers, saveContractBrokers, validateContractBrokers } from "../../services/contractBrokers";
 import { ContractBroker } from "../entities/ContractBroker";
 import { linkContractParties, normalizePaymentAccount } from "../../services/contractParties";
-import { contractPdfFilename, generateContractPdf, getPdfFixations, getPdfSettings } from "../../services/contractPdf";
+import { contractPdfFilename, generateContractPdf, getPdfFixations } from "../../services/contractPdf";
+import { resolveContractTemplate } from "../../services/contractTemplates";
+import { ContractTemplate } from "../entities/ContractTemplate";
 import { Tenant } from "../entities/Tenant";
 import { STAGES, applyAction, startWorkflow, stagesOf } from "../../services/contractWorkflow";
 
@@ -26,6 +28,7 @@ const ALLOWED_FIELDS: (keyof GrainContract)[] = [
   "commission_seller_contract_value", "commission_buyer_contract_value", "total_received",
   "status_received", "expected_receipt_date", "table_id",
   "price_type", "fixation_mode", "cbot_reference", "fixation_deadline", "frame_chicago", "frame_premium", "frame_exchange",
+  "template_id",
 ];
 
 const PRICE_TYPES = ["fixed", "to_fix"];
@@ -55,6 +58,16 @@ function normalizePricing(c: GrainContract) {
   }
 }
 
+// Modelo escolhido precisa ser da corretora; vazio vira nulo (= padrão). Modelo arquivado só fica se já era o do contrato.
+async function validateTemplate(tenantId: string, input: Partial<GrainContract>, current?: string | null): Promise<string | null> {
+  if (input.template_id === undefined) return null;
+  if (!input.template_id) { input.template_id = null; return null; }
+  const t = await AppDataSource.getRepository(ContractTemplate).findOne({ where: { id: String(input.template_id), tenant_id: tenantId }, select: ["id", "active"] });
+  if (!t) return "Modelo de contrato não encontrado";
+  if (!t.active && t.id !== current) return "Este modelo de contrato está arquivado";
+  return null;
+}
+
 export class GrainContractController {
   async create(req: Request, res: Response) {
     const contractRepo = AppDataSource.getRepository(GrainContract);
@@ -63,6 +76,8 @@ export class GrainContractController {
     if (pricingError) return res.status(400).json({ error: pricingError });
     const brokersError = await validateContractBrokers(req.user.tenant_id, req.body.brokers, input.contract_emission_date);
     if (brokersError) return res.status(400).json({ error: brokersError });
+    const templateError = await validateTemplate(req.user.tenant_id, input);
+    if (templateError) return res.status(400).json({ error: templateError });
     const contract = contractRepo.create({ ...input, tenant_id: req.user.tenant_id });
     const tenant = await AppDataSource.getRepository(Tenant).findOne({ where: { id: req.user.tenant_id } });
     startWorkflow(contract, tenant, req.user.name);
@@ -162,10 +177,10 @@ export class GrainContractController {
     ]);
     if (!contract) return res.status(404).json({ error: "Contrato não encontrado" });
     if (!tenant) return res.status(404).json({ error: "Corretora não encontrada" });
-    const [layout, fixations] = await Promise.all([getPdfSettings(tenant_id), getPdfFixations(tenant_id, contract)]);
-    const pdf = await generateContractPdf(contract, tenant, role, layout, fixations);
+    const [{ resolved }, fixations] = await Promise.all([resolveContractTemplate(tenant_id, contract), getPdfFixations(tenant_id, contract)]);
+    const pdf = await generateContractPdf(contract, tenant, role, resolved, fixations);
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename="${contractPdfFilename(contract, role)}"`);
+    res.setHeader("Content-Disposition", `inline; filename="${contractPdfFilename(contract, role, resolved.language)}"`);
     return res.send(pdf);
   }
 
@@ -178,6 +193,8 @@ export class GrainContractController {
     if (pricingError) return res.status(400).json({ error: pricingError });
     const brokersError = await validateContractBrokers(req.user.tenant_id, req.body.brokers, input.contract_emission_date ?? contract.contract_emission_date);
     if (brokersError) return res.status(400).json({ error: brokersError });
+    const templateError = await validateTemplate(req.user.tenant_id, input, contract.template_id);
+    if (templateError) return res.status(400).json({ error: templateError });
 
     // Com fixações lançadas, o modo de preço e a quantidade não podem contradizê-las.
     const fixationCount = await AppDataSource.getRepository(ContractFixation).count({ where: { contract_id: contract.id, tenant_id: req.user.tenant_id } });

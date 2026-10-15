@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/services/api";
+import { formatDate } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { ClientPicker, type BankAccount, type ClientOption } from "@/components/ClientPicker";
 import { PriceModeSection } from "./PriceModeSection";
@@ -64,6 +65,7 @@ interface ContractForm {
   observation: string;
   internal_communication: string;
   brokers: { broker_id: string; commission_percent: string }[];
+  template_id: string;
 }
 
 // O "Nº Corretor/Broker" do contrato é o código do broker (ou o nome, se ele não tiver código).
@@ -82,6 +84,7 @@ export function ContractFormPage() {
   const [error, setError] = useState("");
   const [products, setProducts] = useState<any[]>([]);
   const [brokerList, setBrokerList] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<{ id: string; name: string; language: string; is_default: boolean; active: boolean }[]>([]);
   const [saved, setSaved] = useState<any | null>(null);
   // Fluxo simplificado: o contrato já nasce pronto para envio, sem passar pela análise.
   const [simpleFlow, setSimpleFlow] = useState(false);
@@ -128,6 +131,7 @@ export function ContractFormPage() {
   useEffect(() => {
     api.get("/api/products").then((r) => setProducts(r.data)).catch(console.error);
     api.get("/api/brokers").then((r) => setBrokerList(r.data)).catch(console.error);
+    api.get("/api/contract-templates").then((r) => setTemplates(r.data)).catch(console.error);
     if (!isEditing) api.get("/api/tenant").then((r) => setSimpleFlow(r.data?.workflow_mode === "simple")).catch(() => undefined);
     if (isEditing) {
       api.get(`/api/contracts/${id}`).then((r) => {
@@ -139,6 +143,7 @@ export function ContractFormPage() {
           payment_account: d.payment_account ?? null,
           list_email_seller: (d.list_email_seller || []).map((v: string) => ({ value: v })),
           list_email_buyer: (d.list_email_buyer || []).map((v: string) => ({ value: v })),
+          template_id: d.template_id ?? "",
           brokers: (d.brokers || []).map((b: any) => ({ broker_id: b.broker_id, commission_percent: b.commission_percent === null ? "" : String(b.commission_percent) })),
           quantity: String(d.quantity ?? ""),
           price: String(d.price ?? ""),
@@ -251,6 +256,9 @@ export function ContractFormPage() {
     if (accountKey(a) && !accountOptions.some((o) => accountKey(o) === accountKey(a))) accountOptions.push(a);
   }
   if (paymentAccount && !accountOptions.some((o) => accountKey(o) === accountKey(paymentAccount))) accountOptions.push(paymentAccount);
+  // Opções além de "Padrão da corretora": os outros modelos ativos e o que o contrato já usa (mesmo arquivado).
+  const defaultTemplate = templates.find((t) => t.is_default);
+  const templateOptions = templates.filter((t) => t.id === watch("template_id") || (t.active && !t.is_default));
   const linkedHint = (clientId?: string | null) => clientId
     ? <p className="text-xs text-muted-foreground">Vinculado ao cadastro</p>
     : null;
@@ -318,6 +326,23 @@ export function ContractFormPage() {
                   <Input {...register("owner_contract")} />
                 </div>
               </div>
+              {/* Só aparece quando há o que escolher além do modelo padrão. */}
+              {templateOptions.length > 0 && (
+                <div className="space-y-2">
+                  <Label htmlFor="template_id">Modelo do contrato (PDF)</Label>
+                  <select id="template_id" key={templates.length} className={selectClass} {...register("template_id")}>
+                    <option value="">Padrão da corretora{defaultTemplate ? ` (${defaultTemplate.name})` : ""}</option>
+                    {templateOptions.map((t) => (
+                      <option key={t.id} value={t.id}>{t.name} · {t.language === "en" ? "Inglês" : "Português"}{t.active ? "" : " (arquivado)"}</option>
+                    ))}
+                  </select>
+                  {saved?.template_snapshot?.sent_at && (
+                    <p className="text-xs text-muted-foreground">
+                      Enviado com o modelo "{saved.template_snapshot.name}" em {formatDate(saved.template_snapshot.sent_at)}: o PDF mostra essa versão. Trocar o modelo vale para o próximo envio.
+                    </p>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 

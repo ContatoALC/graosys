@@ -137,7 +137,7 @@ test.describe("Dados para templates de contrato", () => {
     await api.dispose();
   });
 
-  test("endereço da corretora é salvo no Layout do PDF", async ({ page }) => {
+  test("endereço da corretora é salvo em Modelos de contrato", async ({ page }) => {
     const city = `Cidade ${uid()}`;
     await page.goto("/admin/pdf-layout");
     await expect(page.getByLabel("Cidade")).toBeEditable();

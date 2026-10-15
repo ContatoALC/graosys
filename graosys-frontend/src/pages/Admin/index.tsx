@@ -51,8 +51,8 @@ const adminModules = [
     color: "bg-sky-100 text-sky-700",
   },
   {
-    label: "Layout do PDF",
-    description: "Logo e marca d'água dos contratos",
+    label: "Modelos de contrato",
+    description: "Idioma, cláusulas e visual do PDF dos contratos",
     icon: FileImage,
     path: "/admin/pdf-layout",
     color: "bg-rose-100 text-rose-700",

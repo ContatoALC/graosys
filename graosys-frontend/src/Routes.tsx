@@ -19,6 +19,7 @@ import { AdminProductsPage } from "@/pages/Admin/Products";
 import { AdminBrokersPage } from "@/pages/Admin/Brokers";
 import { AdminEmailSettingsPage } from "@/pages/Admin/EmailSettings";
 import { AdminPdfLayoutPage } from "@/pages/Admin/PdfLayout";
+import { AdminContractTemplateEditorPage } from "@/pages/Admin/PdfLayout/TemplateEditor";
 import { AdminTablesPage } from "@/pages/Admin/Tables";
 import { AdminAuditPage } from "@/pages/Admin/Audit";
 import { AdminSessionsPage } from "@/pages/Admin/Sessions";
@@ -88,6 +89,7 @@ export function AppRoutes() {
         <Route path="admin/brokers" element={<AdminRoute><AdminBrokersPage /></AdminRoute>} />
         <Route path="admin/email" element={<AdminRoute><AdminEmailSettingsPage /></AdminRoute>} />
         <Route path="admin/pdf-layout" element={<AdminRoute><AdminPdfLayoutPage /></AdminRoute>} />
+        <Route path="admin/pdf-layout/:id" element={<AdminRoute><AdminContractTemplateEditorPage /></AdminRoute>} />
         <Route path="admin/audit" element={<AdminRoute><AdminAuditPage /></AdminRoute>} />
         <Route path="admin/sessions" element={<AdminRoute><AdminSessionsPage /></AdminRoute>} />
         <Route path="admin/tables" element={<AdminRoute><AdminTablesPage /></AdminRoute>} />

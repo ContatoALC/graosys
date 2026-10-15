@@ -1,5 +1,6 @@
 import { Entity, Column, CreateDateColumn, PrimaryColumn, BeforeUpdate } from "typeorm";
 import { v4 as uuid } from "uuid";
+import type { TemplateContent } from "../../services/contractTemplates";
 
 @Entity("grain_contracts")
 export class GrainContract {
@@ -200,6 +201,14 @@ export class GrainContract {
   // Pós-venda: depois do envio o contrato fica na Execução ("Em Embarque") até o embarque ser concluído.
   @Column({ default: false })
   track_shipment: boolean;
+
+  // Modelo de contrato do PDF; nulo = padrão da corretora. O envio fixa o modelo usado.
+  @Column({ type: "varchar", nullable: true })
+  template_id: string | null;
+
+  // Texto do modelo (idioma, campos, cláusulas) congelado no último envio: o PDF mostra o que as partes receberam.
+  @Column({ type: "jsonb", nullable: true })
+  template_snapshot: (TemplateContent & { sent_at?: string }) | null;
 
   @Column({ nullable: true, type: "uuid" })
   table_id: string;

@@ -10,7 +10,7 @@ import { ProductController, ProductTableController } from "../controllers/Produc
 import { DashboardController } from "../controllers/DashboardController";
 import { BrokerController } from "../controllers/BrokerController";
 import { EmailSettingsController } from "../controllers/EmailSettingsController";
-import { PdfSettingsController } from "../controllers/PdfSettingsController";
+import { ContractTemplateController } from "../controllers/ContractTemplateController";
 import { FixationController } from "../controllers/FixationController";
 import { AuditController } from "../controllers/AuditController";
 import { auditMiddleware } from "../middlewares/auditMiddleware";
@@ -35,7 +35,7 @@ const platform = new PlatformController();
 const lead = new LeadController();
 const audit = new AuditController();
 const fixation = new FixationController();
-const pdfSettings = new PdfSettingsController();
+const contractTemplate = new ContractTemplateController();
 const emailSettings = new EmailSettingsController();
 const broker = new BrokerController();
 const lookup = new LookupController();
@@ -159,10 +159,16 @@ router.get("/api/platform/leads/:id", requireSuperadmin, lead.get);
 router.patch("/api/platform/leads/:id", requireSuperadmin, lead.update);
 router.delete("/api/platform/leads/:id", requireSuperadmin, lead.delete);
 
-// Layout do PDF do contrato (Admin)
-router.get("/api/pdf-settings", requireRole("admin"), pdfSettings.get);
-router.put("/api/pdf-settings", requireRole("admin"), pdfSettings.save);
-router.get("/api/pdf-settings/preview", requireRole("admin"), pdfSettings.preview);
+// Modelos de contrato (PDF). A lista também alimenta o seletor do contrato; o resto é do Admin.
+router.get("/api/contract-templates", requirePermission("contracts", "view"), contractTemplate.list);
+router.get("/api/contract-templates/catalog", requireRole("admin"), contractTemplate.catalog);
+router.post("/api/contract-templates/preview", requireRole("admin"), contractTemplate.preview);
+router.get("/api/contract-templates/:id", requireRole("admin"), contractTemplate.get);
+router.post("/api/contract-templates", requireRole("admin"), contractTemplate.create);
+router.put("/api/contract-templates/:id", requireRole("admin"), contractTemplate.update);
+router.delete("/api/contract-templates/:id", requireRole("admin"), contractTemplate.delete);
+router.post("/api/contract-templates/:id/duplicate", requireRole("admin"), contractTemplate.duplicate);
+router.post("/api/contract-templates/:id/default", requireRole("admin"), contractTemplate.setDefault);
 
 // Configuração de e-mail da corretora (Admin)
 router.get("/api/email-settings", requireRole("admin"), emailSettings.get);

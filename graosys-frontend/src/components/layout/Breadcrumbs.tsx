@@ -7,13 +7,13 @@ const LABELS: Record<string, string> = {
   dashboard: "Dashboard", contracts: "Contratos", new: "Novo", clients: "Clientes", execution: "Execução",
   billing: "Cobrança", receipt: "Recebimento", reports: "Relatórios", admin: "Administração", users: "Usuários",
   access: "Controle de Acesso", products: "Produtos", brokers: "Corretores/Brokers", email: "E-mail da Corretora",
-  "pdf-layout": "Layout do PDF", tables: "Mesas", "my-account": "Minha Conta", platform: "Painel de Controle",
+  "pdf-layout": "Modelos de contrato", tables: "Mesas", "my-account": "Minha Conta", platform: "Painel de Controle",
   leads: "Prospecção", tenants: "Corretoras", audit: "Auditoria", management: "Gerência", "broker-commissions": "Comissões dos Brokers", sessions: "Usuários online", volume: "Volume",
 };
 
 // Segmentos dinâmicos (ids): o rótulo depende da seção anterior.
 const DYNAMIC: Record<string, string> = {
-  contracts: "Editar contrato", clients: "Editar cliente", tenants: "Detalhe da corretora", leads: "Ficha do lead",
+  contracts: "Editar contrato", clients: "Editar cliente", "pdf-layout": "Editar modelo", tenants: "Detalhe da corretora", leads: "Ficha do lead",
 };
 
 // Segmentos sem página própria: aparecem no caminho mas não são links.
