@@ -1,4 +1,5 @@
 import { test, expect } from "../support/fixtures";
+import { choose } from "../support/select";
 import { adminApi, contractPayload, post, uid } from "../support/api";
 
 // Dados que alimentam os templates de contrato: vínculo das partes com o cadastro, conta de pagamento,
@@ -27,7 +28,7 @@ test.describe("Dados para templates de contrato", () => {
     // Contrato: vendedor escolhido da lista, comprador digitado
     await post(api, "/api/brokers", { name: `Broker ${id}`, code: `B${id}` });
     await page.goto("/contracts/new");
-    await page.getByLabel("Nº Corretor/Broker *").selectOption({ label: `B${id} · Broker ${id}` });
+    await choose(page, page.getByLabel("Nº Corretor/Broker *"), `B${id} · Broker ${id}`);
     await page.locator('input[name="number_contract"]').fill(number);
     const account = page.getByLabel("Conta para pagamento");
     await expect(account).toBeDisabled();
@@ -39,7 +40,7 @@ test.describe("Dados para templates de contrato", () => {
     await expect(page.getByTestId("buyer-0")).not.toContainText("Vinculado ao cadastro");
 
     await expect(account).toBeEnabled();
-    await account.selectOption({ label: `Banco E2E · Ag. 1234 · C/C ${id}-0` });
+    await choose(page, account, `Banco E2E · Ag. 1234 · C/C ${id}-0`);
 
     await page.getByRole("combobox").filter({ hasText: "Selecione o produto" }).click();
     await page.getByRole("option", { name: `Produto TPL ${id}` }).click();
@@ -60,7 +61,7 @@ test.describe("Dados para templates de contrato", () => {
     // Reabrir mantém o vínculo e a conta; voltar a digitar o nome desfaz o vínculo
     await page.goto(`/contracts/${saved.id}`);
     await expect(page.getByTestId("seller-0")).toContainText("Vinculado ao cadastro");
-    await expect(page.getByLabel("Conta para pagamento").locator("option:checked")).toHaveText(`Banco E2E · Ag. 1234 · C/C ${id}-0`);
+    await expect(page.getByLabel("Conta para pagamento")).toHaveText(`Banco E2E · Ag. 1234 · C/C ${id}-0`);
     await page.getByPlaceholder("Buscar ou digitar o vendedor").fill("Outro vendedor digitado");
     await expect(page.getByTestId("seller-0")).not.toContainText("Vinculado ao cadastro");
     await page.getByRole("button", { name: "Salvar Alterações" }).click();

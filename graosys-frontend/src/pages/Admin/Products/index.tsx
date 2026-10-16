@@ -11,11 +11,11 @@ import { api } from "@/services/api";
 import { useForm } from "react-hook-form";
 import { useConfirm } from "@/contexts/ConfirmContext";
 import { toast } from "sonner";
+import { FormSelect } from "@/components/ui/simple-select";
 
 interface ProductForm { product_type: string; name: string; quality: string; observation: string; template_id: string; }
 interface TemplateOption { id: string; name: string; language: string; is_default: boolean; active: boolean }
 
-const selectClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function AdminProductsPage() {
   const confirm = useConfirm();
@@ -23,7 +23,7 @@ export function AdminProductsPage() {
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
   const [showDialog, setShowDialog] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const { register, handleSubmit, reset, watch } = useForm<ProductForm>();
+  const { register, control, handleSubmit, reset, watch } = useForm<ProductForm>();
 
   function load() { api.get("/api/products").then((r) => setProducts(r.data)).catch(console.error); }
   useEffect(() => {
@@ -99,12 +99,11 @@ export function AdminProductsPage() {
             <div className="space-y-2"><Label>Observação</Label><Input {...register("observation")} /></div>
             <div className="space-y-2">
               <Label htmlFor="product-template">Modelo de contrato</Label>
-              <select id="product-template" key={templates.length} className={selectClass} {...register("template_id")}>
-                <option value="">Padrão da corretora</option>
-                {templateOptions.map((t) => (
-                  <option key={t.id} value={t.id}>{t.name} · {t.language === "en" ? "Inglês" : "Português"}{t.active ? "" : " (arquivado)"}</option>
-                ))}
-              </select>
+              <FormSelect control={control} name="template_id" id="product-template"
+                options={[
+                  { value: "", label: "Padrão da corretora" },
+                  ...templateOptions.map((t) => ({ value: t.id, label: `${t.name} · ${t.language === "en" ? "Inglês" : "Português"}${t.active ? "" : " (arquivado)"}` })),
+                ]} />
               <p className="text-xs text-muted-foreground">Contrato novo deste produto já vem com este modelo escolhido (dá para trocar no contrato).</p>
             </div>
             <DialogFooter>

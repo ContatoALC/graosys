@@ -8,8 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/services/api";
 import { actionLabel, fmtDateTime, parseUserAgent } from "@/lib/audit";
+import { SimpleSelect } from "@/components/ui/simple-select";
 
-const selectClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 interface Filters { search: string; action: string; result: string; from: string; to: string; tenant_id: string }
 const EMPTY: Filters = { search: "", action: "", result: "", from: "", to: "", tenant_id: "" };
@@ -53,20 +53,15 @@ export function AuditView({ platform = false }: { platform?: boolean }) {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input className="pl-9" placeholder="Usuário, e-mail, ação ou id..." value={filters.search} onChange={(e) => set("search", e.target.value)} onKeyDown={(e) => e.key === "Enter" && apply()} />
         </div>
-        <select className={selectClass} value={filters.action} onChange={(e) => set("action", e.target.value)}>
-          <option value="">Todas as ações</option>
-          {actions.map((a) => <option key={a} value={a}>{actionLabel(a)}</option>)}
-        </select>
-        <select className={selectClass} value={filters.result} onChange={(e) => set("result", e.target.value)}>
-          <option value="">Todos os resultados</option><option value="ok">Sucesso</option><option value="error">Erro / negado</option>
-        </select>
+        <SimpleSelect aria-label="Ação" value={filters.action} onValueChange={(v) => set("action", v)}
+          options={[{ value: "", label: "Todas as ações" }, ...actions.map((a) => ({ value: a, label: actionLabel(a) }))]} />
+        <SimpleSelect aria-label="Resultado" value={filters.result} onValueChange={(v) => set("result", v)}
+          options={[{ value: "", label: "Todos os resultados" }, { value: "ok", label: "Sucesso" }, { value: "error", label: "Erro / negado" }]} />
         <DatePicker value={filters.from} onChange={(v) => set("from", v)} title="De" aria-label="De" />
         <DatePicker value={filters.to} onChange={(v) => set("to", v)} title="Até" aria-label="Até" />
         {platform && (
-          <select className={`${selectClass} lg:col-span-2`} value={filters.tenant_id} onChange={(e) => set("tenant_id", e.target.value)}>
-            <option value="">Todas as corretoras</option>
-            {tenants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
+          <SimpleSelect className="lg:col-span-2" aria-label="Corretora" value={filters.tenant_id} onValueChange={(v) => set("tenant_id", v)}
+            options={[{ value: "", label: "Todas as corretoras" }, ...tenants.map((t) => ({ value: t.id, label: t.name }))]} />
         )}
         <div className="flex gap-2 lg:col-span-2">
           <Button onClick={apply}>Filtrar</Button>

@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "../support/fixtures";
+import { choose } from "../support/select";
 import { adminApi, contractPayload, post, uid } from "../support/api";
 
 const MONTHS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
@@ -51,7 +52,7 @@ test.describe("Painel de Controle › Volume", () => {
       await expect(page.getByRole("heading", { name: "Toneladas por corretora" })).toBeVisible();
       await expect(page.getByText("Interna", { exact: true })).toHaveCount(0);
 
-      await page.getByLabel("Período").selectOption("all");
+      await choose(page, page.getByRole("combobox", { name: "Período" }), "Todo o período");
       await page.getByLabel(/Incluir corretora interna/).check();
       const tenantsTable = card(page, /^Corretoras$/).getByRole("table");
       await expect(tenantsTable.getByRole("row").filter({ hasText: "Interna" })).toBeVisible();
@@ -73,7 +74,7 @@ test.describe("Painel de Controle › Volume", () => {
       await expect(await hoverMonth(page, label)).toContainText("R$ 200.000");
 
       // Período de 12 meses não mostra o mês antigo
-      await page.getByLabel("Período").selectOption("365");
+      await choose(page, page.getByRole("combobox", { name: "Período" }), "Últimos 12 meses");
       await expect(page.locator(".recharts-cartesian-axis-tick-value", { hasText: label })).toHaveCount(0);
     } finally {
       for (const cid of ids) await api.delete(`/api/contracts/${cid}`);

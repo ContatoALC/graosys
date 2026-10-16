@@ -12,10 +12,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { api } from "@/services/api";
 import { toast } from "sonner";
 import { LANGUAGE_LABELS } from ".";
+import { SimpleSelect } from "@/components/ui/simple-select";
 
 const MAX_BYTES = 300 * 1024;
 const PREVIEW_DELAY = 800;
-const selectClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const textareaClass = "flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const positions = [
   { value: "left", label: "Esquerda" },
@@ -317,9 +317,8 @@ export function AdminContractTemplateEditorPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="tpl-language">Idioma do PDF e do e-mail</Label>
-                <select id="tpl-language" className={selectClass} value={tpl.language} onChange={(e) => changeLanguage(e.target.value as Lang)}>
-                  {Object.entries(LANGUAGE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                </select>
+                <SimpleSelect id="tpl-language" value={tpl.language} onValueChange={(v) => changeLanguage(v as Lang)}
+                  options={Object.entries(LANGUAGE_LABELS).map(([value, label]) => ({ value, label }))} />
                 <p className="text-xs text-muted-foreground">Muda os rótulos, as datas (01/10/2026 ↔ Oct 1, 2026) e os números (1.234,56 ↔ 1,234.56).</p>
               </div>
               <div className="space-y-2">
@@ -458,10 +457,8 @@ export function AdminContractTemplateEditorPage() {
             </div>
             <div className="space-y-1">
               <Label htmlFor="preview-role" className="text-xs">Via</Label>
-              <select id="preview-role" className={`${selectClass} h-8 w-36 py-0`} value={role} onChange={(e) => setRole(e.target.value)}>
-                <option value="Vendedor">Vendedor</option>
-                <option value="Comprador">Comprador</option>
-              </select>
+              <SimpleSelect id="preview-role" className="h-8 w-36" value={role} onValueChange={setRole}
+                options={[{ value: "Vendedor", label: "Vendedor" }, { value: "Comprador", label: "Comprador" }]} />
             </div>
             {previewing && <Loader2 className="mb-2 h-4 w-4 animate-spin text-muted-foreground" />}
           </div>

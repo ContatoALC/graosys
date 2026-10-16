@@ -1,4 +1,5 @@
 import { test, expect } from "../support/fixtures";
+import { choose } from "../support/select";
 import { uid } from "../support/api";
 
 test.describe("Leads (superadmin)", () => {
@@ -20,16 +21,16 @@ test.describe("Leads (superadmin)", () => {
     await page.getByRole("button", { name: "Buscar" }).click();
     const card = page.locator("div.rounded-lg", { has: page.getByRole("link", { name }) }).last();
     await expect(card).toContainText("Curitiba-PR");
-    await expect(card.locator("select")).toHaveValue("a_contatar");
+    await expect(card.getByLabel("Etapa")).toHaveText("A contatar");
     const moved = page.waitForResponse((r) => r.url().includes("/api/platform/leads/") && r.request().method() === "PATCH");
-    await card.locator("select").selectOption({ label: "Ligação feita" });
+    await choose(page, card.getByLabel("Etapa"), "Ligação feita");
     expect((await moved).ok()).toBeTruthy();
 
     // /platform/leads/:id
     await page.getByRole("link", { name }).click();
     await expect(page).toHaveURL(/\/platform\/leads\/[\w-]+$/);
     await expect(page.getByRole("heading", { name })).toBeVisible();
-    await expect(page.locator('select[name="status"]')).toHaveValue("ligacao_feita");
+    await expect(page.getByLabel("Etapa")).toHaveText("Ligação feita");
     await page.locator('input[name="next_step"]').fill("Agendar demo");
     await page.locator('input[name="next_step_date"]').fill("15/01/2030");
     await page.getByRole("button", { name: "Adicionar telefone" }).click();

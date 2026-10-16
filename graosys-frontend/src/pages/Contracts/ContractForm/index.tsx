@@ -17,6 +17,7 @@ import { PriceModeSection } from "./PriceModeSection";
 import { ContractStageBadge } from "@/components/ContractStageBadge";
 import { ContractTimeline } from "@/components/ContractTimeline";
 import { ContractWorkflowActions } from "@/components/ContractWorkflowActions";
+import { FormSelect, SimpleSelect } from "@/components/ui/simple-select";
 
 interface ContractForm {
   number_broker: string;
@@ -72,7 +73,6 @@ interface ContractForm {
 const brokerNumber = (b: { code?: string | null; name: string }) => (b.code || b.name || "").trim();
 const brokerLabel = (b: { code?: string | null; name: string }) => (b.code ? `${b.code} · ${b.name}` : `${b.name} (sem código)`);
 
-const selectClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const accountKey = (a?: BankAccount | null) => (a ? [a.bank, a.agency, a.account, a.pix].map((v) => v || "").join("|") : "");
 const accountLabel = (a: BankAccount) => [a.bank, a.agency && `Ag. ${a.agency}`, a.account && `C/C ${a.account}`, a.pix && `Pix ${a.pix}`].filter(Boolean).join(" · ");
 
@@ -303,20 +303,15 @@ export function ContractFormPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="number_broker">Nº Corretor/Broker *</Label>
-                  <select
-                    id="number_broker"
-                    key={brokerList.length}
-                    className={`${selectClass} ${errors.number_broker ? "border-destructive" : ""}`}
-                    {...register("number_broker", { required: true, onChange: (e) => handleBrokerNumber(e.target.value) })}
-                  >
-                    <option value="">Selecione o broker</option>
-                    {brokerList.filter((b) => b.active || brokerNumber(b) === watch("number_broker")).map((b) => (
-                      <option key={b.id} value={brokerNumber(b)}>{brokerLabel(b)}</option>
-                    ))}
-                    {watch("number_broker") && !brokerList.some((b) => brokerNumber(b) === watch("number_broker")) && (
-                      <option value={watch("number_broker")}>{watch("number_broker")} (sem cadastro)</option>
-                    )}
-                  </select>
+                  <FormSelect
+                    control={control} name="number_broker" id="number_broker" rules={{ required: true }}
+                    placeholder="Selecione o broker" onValueChange={handleBrokerNumber}
+                    options={[
+                      ...brokerList.filter((b) => b.active || brokerNumber(b) === watch("number_broker")).map((b) => ({ value: brokerNumber(b), label: brokerLabel(b) })),
+                      ...(watch("number_broker") && !brokerList.some((b) => brokerNumber(b) === watch("number_broker"))
+                        ? [{ value: watch("number_broker"), label: `${watch("number_broker")} (sem cadastro)` }] : []),
+                    ]}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Nº Contrato *</Label>
@@ -337,12 +332,13 @@ export function ContractFormPage() {
               {templateOptions.length > 0 && (
                 <div className="space-y-2">
                   <Label htmlFor="template_id">Modelo do contrato (PDF)</Label>
-                  <select id="template_id" key={templates.length} className={selectClass} {...register("template_id", { onChange: () => { templateTouched.current = true; } })}>
-                    <option value="">Padrão da corretora{defaultTemplate ? ` (${defaultTemplate.name})` : ""}</option>
-                    {templateOptions.map((t) => (
-                      <option key={t.id} value={t.id}>{t.name} · {t.language === "en" ? "Inglês" : "Português"}{t.active ? "" : " (arquivado)"}</option>
-                    ))}
-                  </select>
+                  <FormSelect
+                    control={control} name="template_id" id="template_id" onValueChange={() => { templateTouched.current = true; }}
+                    options={[
+                      { value: "", label: `Padrão da corretora${defaultTemplate ? ` (${defaultTemplate.name})` : ""}` },
+                      ...templateOptions.map((t) => ({ value: t.id, label: `${t.name} · ${t.language === "en" ? "Inglês" : "Português"}${t.active ? "" : " (arquivado)"}` })),
+                    ]}
+                  />
                   {saved?.template_snapshot?.sent_at && (
                     <p className="text-xs text-muted-foreground">
                       Enviado com o modelo "{saved.template_snapshot.name}" em {formatDate(saved.template_snapshot.sent_at)}: o PDF mostra essa versão. Trocar o modelo vale para o próximo envio.
@@ -362,10 +358,11 @@ export function ContractFormPage() {
                 const chosen = brokerList.find((b) => b.id === watch(`brokers.${i}.broker_id`));
                 return (
                   <div key={field.id} className="flex items-center gap-2">
-                    <select key={brokerList.length} className={`${selectClass} flex-1`} {...register(`brokers.${i}.broker_id`, { required: true })}>
-                      <option value="">Selecione o broker</option>
-                      {brokerList.filter((b) => b.active || b.id === chosen?.id).map((b) => <option key={b.id} value={b.id}>{brokerLabel(b)}</option>)}
-                    </select>
+                    <FormSelect
+                      control={control} name={`brokers.${i}.broker_id`} rules={{ required: true }} className="flex-1"
+                      aria-label={`Broker ${i + 1}`} placeholder="Selecione o broker"
+                      options={brokerList.filter((b) => b.active || b.id === chosen?.id).map((b) => ({ value: b.id, label: brokerLabel(b) }))}
+                    />
                     {/* O % vem da tabela de comissão do broker; um % antigo gravado no contrato segue no payload, sem aparecer. */}
                     <Button type="button" variant="ghost" size="icon" className="shrink-0" title="Remover broker" onClick={() => contractBrokers.remove(i)}><X className="h-4 w-4" /></Button>
                   </div>
@@ -549,14 +546,15 @@ export function ContractFormPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="payment-account">Conta para pagamento</Label>
-                <select
-                  id="payment-account" className={selectClass} disabled={accountOptions.length === 0}
+                <SimpleSelect
+                  id="payment-account" disabled={accountOptions.length === 0}
                   value={accountKey(paymentAccount)}
-                  onChange={(e) => setValue("payment_account", accountOptions.find((a) => accountKey(a) === e.target.value) ?? null, { shouldDirty: true })}
-                >
-                  <option value="">{accountOptions.length === 0 ? "Nenhuma conta disponível" : "Não informar"}</option>
-                  {accountOptions.map((a) => <option key={accountKey(a)} value={accountKey(a)}>{accountLabel(a)}</option>)}
-                </select>
+                  onValueChange={(v) => setValue("payment_account", accountOptions.find((a) => accountKey(a) === v) ?? null, { shouldDirty: true })}
+                  options={[
+                    { value: "", label: accountOptions.length === 0 ? "Nenhuma conta disponível" : "Não informar" },
+                    ...accountOptions.map((a) => ({ value: accountKey(a), label: accountLabel(a) })),
+                  ]}
+                />
                 <p className="text-xs text-muted-foreground">Contas bancárias dos vendedores vinculados ao cadastro de clientes.</p>
               </div>
             </CardContent>

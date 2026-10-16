@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/services/api";
 import { duration, fmtDateTime, parseUserAgent } from "@/lib/audit";
+import { SimpleSelect } from "@/components/ui/simple-select";
 
-const selectClass = "flex h-10 w-64 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const STATUS: Record<string, { label: string; variant: any }> = {
   online: { label: "Online", variant: "success" }, inactive: { label: "Inativa", variant: "warning" },
   ended: { label: "Encerrada", variant: "secondary" }, expired: { label: "Expirada", variant: "secondary" },
@@ -40,10 +40,8 @@ export function SessionsView({ platform = false }: { platform?: boolean }) {
   return (
     <div className="space-y-4">
       {platform && (
-        <select className={selectClass} value={tenantId} onChange={(e) => setTenantId(e.target.value)}>
-          <option value="">Todas as corretoras</option>
-          {tenants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-        </select>
+        <SimpleSelect className="w-64" aria-label="Corretora" value={tenantId} onValueChange={setTenantId}
+          options={[{ value: "", label: "Todas as corretoras" }, ...tenants.map((t) => ({ value: t.id, label: t.name }))]} />
       )}
 
       <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">

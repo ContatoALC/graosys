@@ -12,8 +12,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { api } from "@/services/api";
-import { PLANS, STATUSES, selectClass, fmtDateTime, PlatformTabs } from "../shared";
+import { PLANS, STATUSES, fmtDateTime, PlatformTabs } from "../shared";
 import { toast } from "sonner";
+import { FormSelect } from "@/components/ui/simple-select";
 
 interface TenantForm { name: string; cnpj: string; email: string; phone: string; plan: string; status: string; plan_expires_at: string; }
 interface UserForm { name: string; email: string; password: string; role: string; }
@@ -108,8 +109,8 @@ export function PlatformTenantDetailPage() {
               <div className="space-y-2"><Label>CNPJ</Label><Input {...tenantForm.register("cnpj")} /></div>
               <div className="space-y-2"><Label>E-mail</Label><Input type="email" {...tenantForm.register("email")} /></div>
               <div className="space-y-2"><Label>Telefone</Label><Input {...tenantForm.register("phone")} /></div>
-              <div className="space-y-2"><Label>Plano</Label><select className={selectClass} {...tenantForm.register("plan")}>{PLANS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}</select></div>
-              <div className="space-y-2"><Label>Status</Label><select className={selectClass} {...tenantForm.register("status")}>{STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}</select></div>
+              <div className="space-y-2"><Label>Plano</Label><FormSelect control={tenantForm.control} name="plan" aria-label="Plano" options={PLANS} /></div>
+              <div className="space-y-2"><Label>Status</Label><FormSelect control={tenantForm.control} name="status" aria-label="Status" options={STATUSES} /></div>
               <div className="space-y-2"><Label>Vencimento do plano</Label><FormDatePicker control={tenantForm.control} name="plan_expires_at" aria-label="Vencimento do plano" /></div>
             </div>
             {msg && <p className={msg.type === "ok" ? "text-sm text-green-700" : "text-sm text-destructive"}>{msg.text}</p>}
@@ -197,7 +198,7 @@ export function PlatformTenantDetailPage() {
             <div className="space-y-2"><Label>Nome *</Label><Input {...userForm.register("name", { required: true })} /></div>
             <div className="space-y-2"><Label>E-mail *</Label><Input type="email" {...userForm.register("email", { required: true })} /></div>
             <div className="space-y-2"><Label>Senha * (mín. 8 caracteres)</Label><Input type="password" autoComplete="new-password" {...userForm.register("password", { required: true, minLength: 8 })} /></div>
-            <div className="space-y-2"><Label>Perfil</Label><select className={selectClass} {...userForm.register("role")}><option value="admin">Administrador</option><option value="user">Usuário</option></select></div>
+            <div className="space-y-2"><Label>Perfil</Label><FormSelect control={userForm.control} name="role" aria-label="Perfil" options={[{ value: "admin", label: "Administrador" }, { value: "user", label: "Usuário" }]} /></div>
             {userError && <p className="text-sm text-destructive">{userError}</p>}
             <DialogFooter><Button type="button" variant="outline" onClick={() => setShowUser(false)}>Cancelar</Button><Button type="submit">Criar</Button></DialogFooter>
           </form>

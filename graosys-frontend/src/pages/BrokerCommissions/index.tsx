@@ -8,8 +8,8 @@ import { BillingStatusBadge } from "@/components/BillingStatusBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/services/api";
 import { formatDate } from "@/lib/utils";
+import { SimpleSelect } from "@/components/ui/simple-select";
 
-const selectClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const PERIODS = [
   { value: "30", label: "Últimos 30 dias" }, { value: "90", label: "Últimos 90 dias" }, { value: "365", label: "Últimos 12 meses" },
   { value: "year", label: "Este ano" }, { value: "all", label: "Todo o período" },
@@ -89,13 +89,10 @@ export function BrokerCommissionsPage() {
             </div>
           )}
           {isAdmin && tab === "broker" && (
-            <select className={selectClass} value={brokerId} onChange={(e) => setBrokerId(e.target.value)}>
-              {(data?.brokers ?? []).map((b: any) => <option key={b.id} value={b.id}>{b.name}{b.active ? "" : " (inativo)"}</option>)}
-            </select>
+            <SimpleSelect aria-label="Broker" value={brokerId} onValueChange={setBrokerId}
+              options={(data?.brokers ?? []).map((b: any) => ({ value: b.id, label: `${b.name}${b.active ? "" : " (inativo)"}` }))} />
           )}
-          <select className={selectClass} value={period} onChange={(e) => setPeriod(e.target.value)}>
-            {PERIODS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-          </select>
+          <SimpleSelect aria-label="Período" value={period} onValueChange={setPeriod} options={PERIODS} />
         </CardContent></Card>
 
         {error ? <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>

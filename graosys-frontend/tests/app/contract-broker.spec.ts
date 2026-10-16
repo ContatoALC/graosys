@@ -1,4 +1,5 @@
 import { test, expect } from "../support/fixtures";
+import { choose } from "../support/select";
 import { adminApi, post, uid } from "../support/api";
 
 // "Nº Corretor/Broker" do contrato: lista dos brokers cadastrados (pelo código); o escolhido entra no quadro
@@ -32,19 +33,21 @@ test.describe("Nº Corretor/Broker", () => {
 
       await page.goto("/contracts/new");
       const number = page.getByLabel("Nº Corretor/Broker *");
-      await expect(number).toHaveValue(`M${id}`);
-      await expect(page.locator('select[name="brokers.0.broker_id"] option:checked')).toHaveText(`M${id} · Meu Broker ${id}`);
+      await expect(number).toHaveText(`M${id} · Meu Broker ${id}`);
+      await expect(page.getByRole("combobox", { name: "Broker 1", exact: true })).toHaveText(`M${id} · Meu Broker ${id}`);
 
       // Trocar o broker no topo substitui o do quadro (não duplica)
-      await number.selectOption({ label: `O${id} · Outro Broker ${id}` });
-      await expect(page.locator('select[name="brokers.0.broker_id"] option:checked')).toHaveText(`O${id} · Outro Broker ${id}`);
-      await expect(page.locator('select[name^="brokers."][name$=".broker_id"]')).toHaveCount(1);
+      await choose(page, number, `O${id} · Outro Broker ${id}`);
+      await expect(page.getByRole("combobox", { name: "Broker 1", exact: true })).toHaveText(`O${id} · Outro Broker ${id}`);
+      await expect(page.locator('[role="combobox"][aria-label^="Broker "]')).toHaveCount(1);
       // Sem campo nem texto de % no quadro; broker sem código aparece marcado
       await expect(page.locator('input[name$=".commission_percent"]')).toHaveCount(0);
       await expect(page.getByText(/^Tabela:/)).toHaveCount(0);
       // A explicação da tabela de comissão é só para o admin da corretora
       await expect(page.getByText(/Cada broker recebe o % da tabela/)).toHaveCount(0);
-      await expect(number.locator("option", { hasText: `Sem Código ${id} (sem código)` })).toHaveCount(1);
+      await number.click();
+      await expect(page.getByRole("option", { name: `Sem Código ${id} (sem código)` })).toHaveCount(1);
+      await page.keyboard.press("Escape");
     } finally {
       await ctx.close();
       await api.delete(`/api/users/${user.id}`);
@@ -53,7 +56,7 @@ test.describe("Nº Corretor/Broker", () => {
 
   test("quem não é broker começa com o campo vazio", async ({ page }) => {
     await page.goto("/contracts/new");
-    await expect(page.getByLabel("Nº Corretor/Broker *")).toHaveValue("");
+    await expect(page.getByLabel("Nº Corretor/Broker *")).toHaveText("Selecione o broker");
     await expect(page.getByText("Nenhum broker neste contrato.")).toBeVisible();
     await expect(page.getByText(/Cada broker recebe o % da tabela/)).toBeVisible(); // admin vê a explicação
   });

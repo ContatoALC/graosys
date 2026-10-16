@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/services/api";
 import { DEPARTMENTS, departmentOf } from "@/lib/workflow";
+import { SimpleSelect } from "@/components/ui/simple-select";
 
-const selectClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 // Soma os status por departamento (a cor de cada fatia é a do departamento).
 function byDepartment(rows: { status: string; contracts: number }[]) {
   const acc = new Map<string, { label: string; color: string; contracts: number }>();
@@ -88,11 +88,10 @@ export function ManagementPage() {
       <PageHeader title="Gerência" description="Indicadores de contratos, volume, comissões e recebimentos da sua corretora" />
       <div className="flex-1 space-y-4 p-6">
         <Card><CardContent className="grid gap-3 pt-4 sm:grid-cols-3">
-          <select className={selectClass} value={period} onChange={(e) => setPeriod(e.target.value)}>{PERIODS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}</select>
+          <SimpleSelect aria-label="Período" value={period} onValueChange={setPeriod} options={PERIODS} />
           <Input placeholder="Safra (ex.: 2025/2026)" value={crop} onChange={(e) => setCrop(e.target.value)} />
-          <select className={selectClass} value={product} onChange={(e) => setProduct(e.target.value)}>
-            <option value="">Todos os produtos</option>{products.map((p) => <option key={p.id} value={p.product_type}>{p.name}</option>)}
-          </select>
+          <SimpleSelect aria-label="Produto" value={product} onValueChange={setProduct}
+            options={[{ value: "", label: "Todos os produtos" }, ...products.map((p) => ({ value: p.product_type, label: p.name }))]} />
         </CardContent></Card>
 
         {loading && !data ? <p className="text-muted-foreground">Carregando...</p> : !data ? null : (

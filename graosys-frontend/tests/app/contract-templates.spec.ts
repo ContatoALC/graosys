@@ -1,4 +1,5 @@
 import { test, expect } from "../support/fixtures";
+import { choose } from "../support/select";
 import { adminApi, contractPayload, post, uid, userApi } from "../support/api";
 import { contractPdf } from "../support/pdf";
 
@@ -14,7 +15,7 @@ test.describe("Modelos de contrato", () => {
     await page.getByRole("button", { name: "Novo modelo" }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("Nome").fill(name);
-    await dialog.getByLabel("Idioma").selectOption({ label: "Inglês" });
+    await choose(page, dialog.getByLabel("Idioma"), "Inglês");
     await dialog.getByRole("button", { name: "Criar e editar" }).click();
     await expect(page).toHaveURL(/\/admin\/pdf-layout\/[0-9a-f-]{36}$/);
     await expect(page.getByRole("heading", { name })).toBeVisible();
@@ -92,8 +93,8 @@ test.describe("Modelos de contrato", () => {
 
     await page.goto(`/contracts/${contract.id}`);
     const select = page.getByLabel("Modelo do contrato (PDF)");
-    await expect(select).toHaveValue("");
-    await select.selectOption({ label: `Mercado interno ${id} · Português` });
+    await expect(select).toContainText("Padrão da corretora");
+    await choose(page, select, `Mercado interno ${id} · Português`);
     await page.getByRole("button", { name: "Salvar Alterações" }).click();
     await expect(page).toHaveURL(/\/contracts$/);
     expect((await (await api.get(`/api/contracts/${contract.id}`)).json()).template_id).toBe(template.id);
@@ -156,7 +157,7 @@ test.describe("Modelos de contrato", () => {
     test.setTimeout(30_000); // cadastro do produto pela tela + contrato novo completo
     const id = uid();
     const api = await adminApi();
-    const exportTpl = await post(api, "/api/contract-templates", { name: `Export ${id}`, language: "en" });
+    await post(api, "/api/contract-templates", { name: `Export ${id}`, language: "en" });
     const domesticTpl = await post(api, "/api/contract-templates", { name: `Interno ${id}`, language: "pt-BR" });
     await post(api, "/api/brokers", { name: `Broker ${id}`, code: `P${id}` });
     await post(api, "/api/products", { product_type: `MILHO${id}`, name: `Milho ${id}` }); // sem modelo: padrão
@@ -167,7 +168,7 @@ test.describe("Modelos de contrato", () => {
     const dialog = page.getByRole("dialog");
     await dialog.locator('input[name="product_type"]').fill(`SOJA${id}`);
     await dialog.locator('input[name="name"]').fill(`Soja export ${id}`);
-    await dialog.getByLabel("Modelo de contrato").selectOption({ label: `Export ${id} · Inglês` });
+    await choose(page, dialog.getByLabel("Modelo de contrato"), `Export ${id} · Inglês`);
     await dialog.getByRole("button", { name: "Criar" }).click();
     await expect(page.getByRole("row", { name: new RegExp(`Soja export ${id}`) })).toContainText(`Export ${id}`);
 
@@ -184,18 +185,18 @@ test.describe("Modelos de contrato", () => {
     // Contrato novo: o produto traz o modelo; outro produto sem modelo volta ao padrão
     await page.goto("/contracts/new");
     await pickProduct(`Soja export ${id}`);
-    await expect(template).toHaveValue(exportTpl.id);
+    await expect(template).toHaveText(`Export ${id} · Inglês`);
     await pickProduct(`Milho ${id}`);
-    await expect(template).toHaveValue("");
+    await expect(template).toContainText("Padrão da corretora");
 
     // Escolha manual: trocar o produto depois não sobrescreve
-    await template.selectOption({ label: `Interno ${id} · Português` });
+    await choose(page, template, `Interno ${id} · Português`);
     await pickProduct(`Soja export ${id}`);
-    await expect(template).toHaveValue(domesticTpl.id);
+    await expect(template).toHaveText(`Interno ${id} · Português`);
 
     // Registra e o modelo escolhido fica gravado
     const number = `TPL-PRD-${id}`;
-    await page.getByLabel("Nº Corretor/Broker *").selectOption({ label: `P${id} · Broker ${id}` });
+    await choose(page, page.getByLabel("Nº Corretor/Broker *"), `P${id} · Broker ${id}`);
     await page.locator('input[name="number_contract"]').fill(number);
     await page.getByPlaceholder("Buscar ou digitar o vendedor").fill("Vendedor E2E");
     await page.getByPlaceholder("Buscar ou digitar o comprador").fill("Comprador E2E");

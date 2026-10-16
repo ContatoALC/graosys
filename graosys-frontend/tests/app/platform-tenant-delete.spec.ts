@@ -1,5 +1,6 @@
 import { request } from "@playwright/test";
 import { test, expect } from "../support/fixtures";
+import { choose } from "../support/select";
 import { API_URL, adminApi, contractPayload, post, uid, userApi } from "../support/api";
 
 // Exclusão de corretora pelo Painel de Controle: irreversível, então só de corretora inativa/suspensa,
@@ -29,7 +30,7 @@ test.describe("Painel de Controle · excluir corretora", () => {
     await expect(danger).toContainText("primeiro mude o status");
 
     // Inativa e salva: o botão libera
-    await page.locator("select").filter({ has: page.locator('option[value="inactive"]') }).selectOption("inactive");
+    await choose(page, page.getByLabel("Status", { exact: true }), "Inativa");
     await page.getByRole("button", { name: "Salvar alterações" }).click();
     await expect(page.getByText("Corretora atualizada")).toBeVisible();
     expect((await api.delete(`/api/platform/tenants/${tenant.id}`, { data: { confirm_name: "outro nome" } })).status()).toBe(400);

@@ -12,7 +12,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { api } from "@/services/api";
-import { PLANS, STATUSES, statusVariant, selectClass, label, fmtDate, fmtDateTime, isExpired, PlatformTabs, brl } from "./shared";
+import { PLANS, STATUSES, statusVariant, label, fmtDate, fmtDateTime, isExpired, PlatformTabs, brl } from "./shared";
+import { FormSelect } from "@/components/ui/simple-select";
 
 interface NewTenantForm {
   name: string; slug: string; cnpj: string; email: string; phone: string; plan: string; plan_expires_at: string;
@@ -123,7 +124,7 @@ export function PlatformPage() {
               <div className="space-y-2"><Label>CNPJ</Label><Input {...register("cnpj")} /></div>
               <div className="space-y-2"><Label>Telefone</Label><Input {...register("phone")} /></div>
               <div className="space-y-2 sm:col-span-2"><Label>E-mail da corretora</Label><Input type="email" {...register("email")} /></div>
-              <div className="space-y-2"><Label>Plano</Label><select className={selectClass} {...register("plan")}>{PLANS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}</select></div>
+              <div className="space-y-2"><Label>Plano</Label><FormSelect control={control} name="plan" aria-label="Plano" options={PLANS} /></div>
               <div className="space-y-2"><Label>Vencimento</Label><FormDatePicker control={control} name="plan_expires_at" aria-label="Vencimento" /></div>
             </div>
             <div className="space-y-3 border-t pt-4">

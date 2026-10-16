@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "../support/fixtures";
+import { choose } from "../support/select";
 import { adminApi, contractPayload, post, uid } from "../support/api";
 
 const kpi = (page: Page, label: string) => page.locator("p", { hasText: new RegExp(`^${label}$`) }).locator("xpath=..");
@@ -44,8 +45,8 @@ test.describe("Comissões de brokers", () => {
 
     await page.goto("/broker-commissions");
     await expect(page.getByRole("heading", { name: "Comissões dos Brokers" })).toBeVisible();
-    await page.locator("select").filter({ has: page.locator("option", { hasText: brokerName }) }).selectOption({ label: brokerName });
-    await page.locator("select").filter({ hasText: "Todo o período" }).selectOption("all");
+    await choose(page, page.getByRole("combobox", { name: "Broker", exact: true }), brokerName);
+    await choose(page, page.getByRole("combobox", { name: "Período" }), "Todo o período");
 
     const row = (s: string) => page.getByRole("row", { name: new RegExp(n(s)) });
     await expect(row("A")).toContainText("20%");
@@ -64,11 +65,11 @@ test.describe("Comissões de brokers", () => {
     await expect(kpi(page, "Contratos")).toContainText("3");
 
     // Período padrão (12 meses) não inclui os contratos de 2024/2025
-    await page.locator("select").filter({ hasText: "Todo o período" }).selectOption("365");
+    await choose(page, page.getByRole("combobox", { name: "Período" }), "Últimos 12 meses");
     await expect(row("A")).toBeHidden();
 
     // Aba de produtividade
-    await page.locator("select").filter({ hasText: "Todo o período" }).selectOption("all");
+    await choose(page, page.getByRole("combobox", { name: "Período" }), "Todo o período");
     await page.getByRole("button", { name: "Produtividade" }).click();
     const ranking = page.getByRole("row", { name: new RegExp(brokerName) });
     await expect(ranking).toContainText("1.000,00");

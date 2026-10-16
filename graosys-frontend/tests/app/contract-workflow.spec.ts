@@ -1,4 +1,5 @@
 import { test, expect } from "../support/fixtures";
+import { choose } from "../support/select";
 import { adminApi, contractPayload, post, uid, userApi } from "../support/api";
 import type { APIRequestContext } from "@playwright/test";
 
@@ -175,7 +176,7 @@ test.describe("Fluxo do contrato nas telas", () => {
 
     await post(api, "/api/brokers", { name: `Broker ${id}`, code: `B${id}` });
     await page.goto("/contracts/new");
-    await page.getByLabel("Nº Corretor/Broker *").selectOption({ label: `B${id} · Broker ${id}` });
+    await choose(page, page.getByLabel("Nº Corretor/Broker *"), `B${id} · Broker ${id}`);
     await page.locator('input[name="number_contract"]').fill(number);
     await page.getByPlaceholder("Buscar ou digitar o vendedor").fill("Vendedor Fluxo");
     await page.getByPlaceholder("Buscar ou digitar o comprador").fill("Comprador Fluxo");

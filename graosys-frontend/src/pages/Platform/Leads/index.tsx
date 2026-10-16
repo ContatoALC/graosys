@@ -10,8 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { api } from "@/services/api";
-import { LEAD_STAGES, PlatformTabs, selectClass } from "../shared";
+import { LEAD_STAGES, PlatformTabs } from "../shared";
 import { toast } from "sonner";
+import { SimpleSelect } from "@/components/ui/simple-select";
 
 interface NewLeadForm { name: string; region: string; probable_plan: string; email: string; decision_maker: string; }
 
@@ -84,9 +85,7 @@ export function PlatformLeadsPage() {
                               {l.next_step}{l.next_step_date ? ` · ${fmt(l.next_step_date)}` : ""}
                             </p>
                           )}
-                          <select className={`${selectClass} h-8 text-xs`} value={l.status} onChange={(e) => moveTo(l, e.target.value)}>
-                            {LEAD_STAGES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                          </select>
+                          <SimpleSelect className="h-8 text-xs" aria-label="Etapa" value={l.status} onValueChange={(v) => moveTo(l, v)} options={LEAD_STAGES} />
                         </CardContent></Card>
                       );
                     })}

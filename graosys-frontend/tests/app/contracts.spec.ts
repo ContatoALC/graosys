@@ -1,4 +1,5 @@
 import { test, expect } from "../support/fixtures";
+import { choose } from "../support/select";
 
 test.describe("Contratos", () => {
   test("cria produto e broker, registra um contrato e edita", async ({ page }) => {
@@ -38,8 +39,8 @@ test.describe("Contratos", () => {
     // Contrato
     await page.goto("/contracts/new");
     // Nº Corretor/Broker: lista dos brokers cadastrados; o escolhido entra sozinho no quadro de comissão
-    await page.getByLabel("Nº Corretor/Broker *").selectOption({ label: `B${suffix} · ${brokerName}` });
-    await expect(page.locator('select[name="brokers.0.broker_id"] option:checked')).toHaveText(`B${suffix} · ${brokerName}`);
+    await choose(page, page.getByLabel("Nº Corretor/Broker *"), `B${suffix} · ${brokerName}`);
+    await expect(page.getByRole("combobox", { name: "Broker 1", exact: true })).toHaveText(`B${suffix} · ${brokerName}`);
     await expect(page.locator('input[name="brokers.0.commission_percent"]')).toHaveCount(0);
     await page.locator('input[name="number_contract"]').fill(number);
 
@@ -69,8 +70,8 @@ test.describe("Contratos", () => {
     await expect(page.getByRole("heading", { name: "Editar Contrato" })).toBeVisible();
     await expect(page.locator('input[name="number_contract"]')).toHaveValue(number);
     await expect(page.getByRole("combobox").filter({ hasText: productName })).toBeVisible();
-    await expect(page.getByLabel("Nº Corretor/Broker *")).toHaveValue(`B${suffix}`);
-    await expect(page.locator('select[name="brokers.0.broker_id"] option:checked')).toHaveText(`B${suffix} · ${brokerName}`);
+    await expect(page.getByLabel("Nº Corretor/Broker *")).toHaveText(`B${suffix} · ${brokerName}`);
+    await expect(page.getByRole("combobox", { name: "Broker 1", exact: true })).toHaveText(`B${suffix} · ${brokerName}`);
 
     // Edição persiste
     await page.locator('input[name="quantity"]').fill("1500");
@@ -87,7 +88,7 @@ test.describe("Contratos", () => {
     await page.goto("/contracts/new");
     await page.getByRole("button", { name: "Registrar Contrato" }).click();
     await expect(page).toHaveURL(/\/contracts\/new$/);
-    await expect(page.locator('select[name="number_broker"]')).toHaveClass(/border-destructive/);
+    await expect(page.getByLabel("Nº Corretor/Broker *")).toHaveClass(/border-destructive/);
     for (const name of ["number_contract", "crop", "quantity", "price"]) {
       await expect(page.locator(`input[name="${name}"]`)).toHaveClass(/border-destructive/);
     }

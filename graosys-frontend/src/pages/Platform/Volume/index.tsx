@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/services/api";
 import { formatDate } from "@/lib/utils";
-import { PlatformTabs, brl, selectClass } from "../shared";
+import { PlatformTabs, brl } from "../shared";
+import { SimpleSelect } from "@/components/ui/simple-select";
 
 type Metric = "contracts" | "tons" | "value_brl";
 const METRICS: { value: Metric; label: string; title: string }[] = [
@@ -143,9 +144,7 @@ export function PlatformVolumePage() {
               </button>
             ))}
           </div>
-          <select className={selectClass} aria-label="Período" value={period} onChange={(e) => setPeriod(e.target.value)}>
-            {PERIODS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-          </select>
+          <SimpleSelect aria-label="Período" value={period} onValueChange={setPeriod} options={PERIODS} />
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" className="h-4 w-4" checked={includeInternal} onChange={(e) => setIncludeInternal(e.target.checked)} />
             Incluir corretora interna (testes e demonstração)

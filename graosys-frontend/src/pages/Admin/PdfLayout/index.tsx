@@ -13,8 +13,8 @@ import { useConfirm } from "@/contexts/ConfirmContext";
 import { formatDate } from "@/lib/utils";
 import { api } from "@/services/api";
 import { toast } from "sonner";
+import { SimpleSelect } from "@/components/ui/simple-select";
 
-const selectClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 export const LANGUAGE_LABELS: Record<string, string> = { "pt-BR": "Português", en: "Inglês" };
 
 interface TemplateRow { id: string; name: string; language: string; is_default: boolean; active: boolean; updated_at: string }
@@ -132,9 +132,8 @@ export function AdminPdfLayoutPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="new-template-language">Idioma</Label>
-              <select id="new-template-language" className={selectClass} value={newLanguage} onChange={(e) => setNewLanguage(e.target.value)}>
-                {Object.entries(LANGUAGE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-              </select>
+              <SimpleSelect id="new-template-language" value={newLanguage} onValueChange={setNewLanguage}
+                options={Object.entries(LANGUAGE_LABELS).map(([value, label]) => ({ value, label }))} />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setShowNew(false)}>Cancelar</Button>

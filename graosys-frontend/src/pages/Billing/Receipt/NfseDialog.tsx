@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { api } from "@/services/api";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { SimpleSelect } from "@/components/ui/simple-select";
 
-const selectClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 // Valor para colar no campo da prefeitura: "1.234,56" (sem "R$").
 const plainMoney = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -181,15 +181,13 @@ export function NfseDialog({ contractId, canEdit, onClose, onSaved }: { contract
                     <div className="grid gap-2 sm:grid-cols-3">
                       <div className="space-y-1 sm:col-span-3">
                         <Label htmlFor="nfse-billing">Recebimento</Label>
-                        <select id="nfse-billing" className={selectClass} value={billingId} onChange={(e) => pickBilling(e.target.value)} disabled={!canEdit}>
-                          {data.billings.map((b: any) => (
-                            <option key={b.id} value={b.id}>
-                              {formatCurrency(b.total_service_value)} · {b.status === "received" ? "Recebido" : b.status === "cancelled" ? "Cancelado" : "Pendente"}
-                              {b.receipt_date || b.expected_receipt_date ? ` · ${formatDate(b.receipt_date || b.expected_receipt_date)}` : ""}
-                              {b.nfs_number ? ` · NFS-e ${b.nfs_number}` : ""}
-                            </option>
-                          ))}
-                        </select>
+                        <SimpleSelect id="nfse-billing" value={billingId} onValueChange={pickBilling} disabled={!canEdit}
+                          options={data.billings.map((b: any) => ({
+                            value: b.id,
+                            label: `${formatCurrency(b.total_service_value)} · ${b.status === "received" ? "Recebido" : b.status === "cancelled" ? "Cancelado" : "Pendente"}`
+                              + (b.receipt_date || b.expected_receipt_date ? ` · ${formatDate(b.receipt_date || b.expected_receipt_date)}` : "")
+                              + (b.nfs_number ? ` · NFS-e ${b.nfs_number}` : ""),
+                          }))} />
                       </div>
                       <div className="space-y-1"><Label htmlFor="nfse-rps">Nº RPS</Label><Input id="nfse-rps" value={rps} onChange={(e) => setRps(e.target.value)} disabled={!canEdit} /></div>
                       <div className="space-y-1"><Label htmlFor="nfse-number">Nº NFS-e</Label><Input id="nfse-number" value={nfs} onChange={(e) => setNfs(e.target.value)} disabled={!canEdit} /></div>

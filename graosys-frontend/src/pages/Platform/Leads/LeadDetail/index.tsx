@@ -9,9 +9,10 @@ import { FormDatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/services/api";
-import { LEAD_STAGES, PlatformTabs, selectClass } from "../../shared";
+import { LEAD_STAGES, PlatformTabs } from "../../shared";
 import { useConfirm } from "@/contexts/ConfirmContext";
 import { toast } from "sonner";
+import { FormSelect } from "@/components/ui/simple-select";
 
 interface LeadForm {
   name: string; region: string; status: string; probable_plan: string;
@@ -69,7 +70,7 @@ export function PlatformLeadDetailPage() {
           <Card><CardContent className="space-y-4 pt-6">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2"><Label>Nome *</Label><Input {...register("name", { required: true })} /></div>
-              <div className="space-y-2"><Label>Etapa</Label><select className={selectClass} {...register("status")}>{LEAD_STAGES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}</select></div>
+              <div className="space-y-2"><Label>Etapa</Label><FormSelect control={control} name="status" aria-label="Etapa" options={LEAD_STAGES} /></div>
               <div className="space-y-2"><Label>Praças</Label><Input {...register("region")} /></div>
               <div className="space-y-2"><Label>Provável plano</Label><Input {...register("probable_plan")} /></div>
             </div>

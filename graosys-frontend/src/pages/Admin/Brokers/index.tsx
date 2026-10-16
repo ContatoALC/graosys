@@ -14,10 +14,10 @@ import { formatDate } from "@/lib/utils";
 import { useForm } from "react-hook-form";
 import { useConfirm } from "@/contexts/ConfirmContext";
 import { toast } from "sonner";
+import { FormSelect } from "@/components/ui/simple-select";
 
 interface BrokerForm { name: string; code: string; cnpj_cpf: string; email: string; phone: string; active: boolean; user_id: string; }
 
-const selectClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const pct = (v: number | null | undefined) => (v === null || v === undefined ? "—" : `${v.toLocaleString("pt-BR", { maximumFractionDigits: 4 })}%`);
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -92,7 +92,7 @@ export function AdminBrokersPage() {
   const [showDialog, setShowDialog] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [ratesBroker, setRatesBroker] = useState<any | null>(null);
-  const { register, handleSubmit, reset } = useForm<BrokerForm>({ defaultValues: { active: true, user_id: "" } });
+  const { register, control, handleSubmit, reset } = useForm<BrokerForm>({ defaultValues: { active: true, user_id: "" } });
 
   function load() { api.get("/api/brokers").then((r) => setBrokers(r.data)).catch(console.error); }
   useEffect(() => { load(); api.get("/api/users").then((r) => setUsers(r.data)).catch(console.error); }, []);
@@ -173,10 +173,8 @@ export function AdminBrokersPage() {
             <p className="text-xs text-muted-foreground">O código é o que vai no "Nº Corretor/Broker" dos contratos. Sem código, vai o nome.</p>
             <div className="space-y-2">
               <Label>Usuário (login)</Label>
-              <select key={users.length} className={selectClass} {...register("user_id")}>
-                <option value="">Sem acesso ao sistema</option>
-                {users.map((u) => <option key={u.id} value={u.id}>{u.name} ({u.email})</option>)}
-              </select>
+              <FormSelect control={control} name="user_id" aria-label="Usuário (login)"
+                options={[{ value: "", label: "Sem acesso ao sistema" }, ...users.map((u) => ({ value: u.id, label: `${u.name} (${u.email})` }))]} />
               <p className="text-xs text-muted-foreground">Com um usuário vinculado, o broker vê as próprias comissões em "Minhas Comissões".</p>
             </div>
             <div className="space-y-2"><Label>CNPJ/CPF</Label><Input {...register("cnpj_cpf")} /></div>
