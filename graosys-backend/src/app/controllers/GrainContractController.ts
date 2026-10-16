@@ -258,7 +258,8 @@ export class GrainContractController {
       .where("c.tenant_id = :tenant_id", { tenant_id: req.user.tenant_id });
 
     if (crop) qb.andWhere("c.crop = :crop", { crop });
-    if (product) qb.andWhere("c.product = :product", { product });
+    // Produto: código ou nome, sem diferenciar maiúsculas e aceitando parte ("soja" acha SOJA / "Soja em Grão").
+    if (product) qb.andWhere("(c.product ILIKE :product OR c.name_product ILIKE :product)", { product: `%${String(product).trim()}%` });
     if (start_date) qb.andWhere("c.contract_emission_date >= :start_date", { start_date });
     if (end_date) qb.andWhere("c.contract_emission_date <= :end_date", { end_date });
 

@@ -25,6 +25,7 @@ Sem backend dá para rodar só `npm run test:public`.
 | `app/nfse.spec.ts` | Dados para NFS-e na Fila da Cobrança: uma nota por parte que paga comissão, tomador do cadastro (aviso quando incompleto), copiar para a área de transferência e registrar Nº RPS/NFS-e no recebimento. |
 | `app/billing.spec.ts` | Recebimentos mudam o status de cobrança do contrato (A Faturar → A Receber → Parcial → Recebido; Em Atraso); cálculo do líquido. |
 | `app/broker-commissions.spec.ts` | Tabela de % por data do broker, % do contrato, parte liberada pelo que a corretora recebeu, filtro de período e produtividade. |
+| `app/reports.spec.ts` | Relatórios: filtro de produto acha pelo código ou pelo nome, sem diferenciar maiúsculas e aceitando parte. |
 | `app/permissions.spec.ts` | Usuário comum: menu, telas restritas redirecionam, API devolve 403; liberar módulo pelo Controle de Acesso. |
 | `app/platform-tenant-delete.spec.ts` | Excluir corretora pelo Painel: só inativa/suspensa, confirmação pelo nome, apaga todos os dados e o login; a própria corretora não sai. |
 | `app/leads.spec.ts` | Lead: criar, mover de etapa, editar ficha em `/platform/leads/:id`, remover. |
