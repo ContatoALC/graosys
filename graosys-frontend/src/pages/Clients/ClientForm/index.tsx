@@ -46,11 +46,21 @@ export function ClientFormPage() {
   const [lookupMsg, setLookupMsg] = useState<{ field: "cnpj" | "cep"; text: string; warn?: boolean } | null>(null);
   const lastCep = useRef("");
 
-  const { register, handleSubmit, reset, control, setValue, getValues, formState: { errors } } = useForm<ClientForm>({
+  const { register, handleSubmit, reset, control, setValue, getValues, watch, formState: { errors } } = useForm<ClientForm>({
     defaultValues: { kind: "PJ", situation: "active", country: "Brasil", country_code: "BR", account: [], contacts: [] },
   });
   const accounts = useFieldArray({ control, name: "account" });
   const contacts = useFieldArray({ control, name: "contacts" });
+  // Estrangeira não tem CPF/CNPJ: o documento do país de origem é opcional e o país não pode ser o Brasil.
+  const foreign = watch("kind") === "EX";
+
+  function changeKind(kind: string, onChange: (v: string) => void) {
+    onChange(kind);
+    if (kind === "EX" && getValues("country_code")?.toUpperCase() === "BR") {
+      setValue("country", "", { shouldDirty: true });
+      setValue("country_code", "", { shouldDirty: true });
+    }
+  }
 
   useEffect(() => {
     if (isEditing) {
@@ -143,11 +153,12 @@ export function ClientFormPage() {
                 <div className="space-y-2">
                   <Label>Tipo *</Label>
                   <Controller name="kind" control={control} rules={{ required: true }} render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <Select value={field.value} onValueChange={(v) => changeKind(v, field.onChange)}>
                       <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="PJ">Pessoa Jurídica</SelectItem>
                         <SelectItem value="PF">Pessoa Física</SelectItem>
+                        <SelectItem value="EX">Estrangeira</SelectItem>
                       </SelectContent>
                     </Select>
                   )} />
@@ -177,9 +188,9 @@ export function ClientFormPage() {
                   <Input {...register("nickname", { required: true })} className={errors.nickname ? "border-destructive" : ""} />
                 </div>
                 <div className="space-y-2">
-                  <Label>CPF / CNPJ *</Label>
+                  <Label>{foreign ? "Documento (país de origem)" : "CPF / CNPJ *"}</Label>
                   <div className="relative">
-                    <Input {...register("cnpj_cpf", { required: true, onBlur: lookupCnpj })} placeholder="000.000.000-00" className={errors.cnpj_cpf ? "border-destructive" : ""} />
+                    <Input {...register("cnpj_cpf", { required: !foreign, onBlur: lookupCnpj })} placeholder={foreign ? "Ex.: Tax ID, RUC, CUIT" : "000.000.000-00"} className={errors.cnpj_cpf ? "border-destructive" : ""} />
                     {lookingUp === "cnpj" && <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />}
                   </div>
                   <LookupHint msg={lookupMsg} field="cnpj" />
@@ -259,7 +270,7 @@ export function ClientFormPage() {
                 <div className="col-span-2 space-y-2">
                   <Label>País</Label>
                   <Input
-                    list="countries-list" placeholder="Brasil" autoComplete="off"
+                    list="countries-list" placeholder={foreign ? "Ex.: Paraguai" : "Brasil"} autoComplete="off"
                     {...register("country", {
                       onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
                         const code = countryCodeFor(e.target.value);
@@ -272,11 +283,16 @@ export function ClientFormPage() {
                 <div className="space-y-2">
                   <Label>Código (ISO)</Label>
                   <Input
-                    maxLength={2} placeholder="BR" className="uppercase"
-                    {...register("country_code", { required: true, pattern: /^[A-Za-z]{2}$/, setValueAs: (v: string) => (v ?? "").toUpperCase() })}
+                    maxLength={2} placeholder={foreign ? "PY" : "BR"}
+                    {...register("country_code", {
+                      required: true, pattern: /^[A-Za-z]{2}$/, setValueAs: (v: string) => (v ?? "").toUpperCase(),
+                      validate: (v) => !foreign || v !== "BR",
+                    })}
+                    className={errors.country_code ? "border-destructive uppercase" : "uppercase"}
                   />
                 </div>
               </div>
+              {foreign && <p className={errors.country_code ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>Cliente estrangeiro: informe o país de origem.</p>}
             </CardContent>
           </Card>
 

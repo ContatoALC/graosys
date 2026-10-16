@@ -14,7 +14,7 @@ Sem backend dá para rodar só `npm run test:public`.
 |---|---|
 | `public/route-coverage.spec.ts` | Toda rota do `src/Routes.tsx` está registrada em `support/routes.ts`. Tela nova sem teste = CI vermelha. |
 | `app/routes.spec.ts` | Todas as telas abrem logado, sem erro JS e sem 5xx da API. |
-| `app/clients.spec.ts`, `app/platform.spec.ts` | Fluxos (cadastro/edição de cliente, detalhe de corretora). |
+| `app/clients.spec.ts`, `app/platform.spec.ts` | Fluxos (cadastro/edição de cliente, detalhe de corretora). Cliente estrangeiro (tipo `EX`): sem CPF/CNPJ, país de origem obrigatório e diferente de Brasil, tomador de NFS-e sem cobrança de CPF/CNPJ, CEP e UF. |
 | `app/contracts.spec.ts` | Cliente + produto + broker → contrato → edição em `/contracts/:id`; campos obrigatórios. |
 | `app/contract-broker.spec.ts` | Nº Corretor/Broker: lista de brokers pelo código, broker logado vem preenchido no contrato novo, trocar o broker troca no quadro de comissão, código único. Nos specs, escolha o broker com `selectOption({ label: "CÓDIGO · Nome" })`. |
 | `app/contract-template-data.spec.ts` | Dados dos templates de contrato: parte vinculada ao cadastro, conta de pagamento, fixações numeradas (F01…) com memória de cálculo (fator, fobbings, PPE) e endereço da corretora. |

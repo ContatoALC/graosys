@@ -15,6 +15,15 @@ function applyContacts(input: Partial<Client>): string | null {
   return null;
 }
 
+// PF = pessoa física, PJ = pessoa jurídica, EX = estrangeira (sem CPF/CNPJ; documento do país de origem, opcional).
+const KINDS = ["PF", "PJ", "EX"];
+
+function kindError(kind: string, countryCode: string): string | null {
+  if (!KINDS.includes(kind)) return "Tipo de cliente inválido: use PF, PJ ou EX (estrangeira)";
+  if (kind === "EX" && countryCode === "BR") return "Cliente estrangeiro: informe o país de origem (diferente de Brasil)";
+  return null;
+}
+
 const ALLOWED_FIELDS: (keyof Client)[] = [
   "nickname", "name", "address", "number", "complement", "district", "city", "state",
   "zip_code", "country", "country_code", "kind", "cnpj_cpf", "ins_est", "ins_mun", "telephone", "cellphone",
@@ -30,6 +39,9 @@ export class ClientController {
     if (contactsError) return res.status(400).json({ error: contactsError });
     const place = resolveCountry(input.country, input.country_code);
     if ("error" in place) return res.status(400).json({ error: place.error });
+    const kindProblem = kindError(input.kind, place.country_code);
+    if (kindProblem) return res.status(400).json({ error: kindProblem });
+    if (input.kind === "EX") input.cnpj_cpf = input.cnpj_cpf ?? "";
     const client = clientRepo.create({ ...input, ...place, tenant_id: req.user.tenant_id });
     await clientRepo.save(client);
     return res.status(201).json(client);
@@ -83,6 +95,10 @@ export class ClientController {
       const place = resolveCountry(input.country ?? client.country, input.country_code ?? (input.country !== undefined ? undefined : client.country_code));
       if ("error" in place) return res.status(400).json({ error: place.error });
       Object.assign(input, place);
+    }
+    if (input.kind !== undefined || input.country_code !== undefined) {
+      const kindProblem = kindError(input.kind ?? client.kind, input.country_code ?? client.country_code);
+      if (kindProblem) return res.status(400).json({ error: kindProblem });
     }
     Object.assign(client, input);
     await clientRepo.save(client);

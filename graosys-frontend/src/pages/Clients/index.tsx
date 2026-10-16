@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Search, Users, Eye, Building2, User } from "lucide-react";
+import { Plus, Search, Users, Eye, Building2, User, Globe } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,8 +93,10 @@ export function ClientsPage() {
                       <TableCell className="font-mono text-xs">{c.code_client}</TableCell>
                       <TableCell>
                         {c.kind === "PJ"
-                          ? <Building2 className="h-4 w-4 text-muted-foreground" />
-                          : <User className="h-4 w-4 text-muted-foreground" />}
+                          ? <Building2 className="h-4 w-4 text-muted-foreground" aria-label="Pessoa Jurídica" />
+                          : c.kind === "EX"
+                            ? <Globe className="h-4 w-4 text-muted-foreground" aria-label="Estrangeira" />
+                            : <User className="h-4 w-4 text-muted-foreground" aria-label="Pessoa Física" />}
                       </TableCell>
                       <TableCell className="font-medium">{c.name}</TableCell>
                       <TableCell>{c.nickname}</TableCell>

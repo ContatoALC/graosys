@@ -89,14 +89,17 @@ export function NfseDialog({ contractId, canEdit, onClose, onSaved }: { contract
   const t = note?.tomador;
   const address = t ? [t.address, t.number, t.complement].filter(Boolean).join(", ") : "";
   const cityUf = t ? [t.city, t.state].filter(Boolean).join("/") : "";
+  const foreign = t?.kind === "EX";
+  const docLabel = foreign ? "Documento (exterior)" : "CNPJ/CPF";
 
   function copyAll() {
     if (!note) return;
     const lines = [
       `NFS-e — contrato ${data.contract.number_contract} (${note.role.toLowerCase()})`,
       "", "TOMADOR",
-      `Nome/Razão social: ${t.name}`, `CNPJ/CPF: ${t.cnpj_cpf || "—"}`, `Inscrição municipal: ${t.ins_mun || "—"}`,
+      `Nome/Razão social: ${t.name}`, `${docLabel}: ${t.cnpj_cpf || "—"}`, `Inscrição municipal: ${t.ins_mun || "—"}`,
       `Endereço: ${address || "—"}`, `Bairro: ${t.district || "—"}`, `Cidade/UF: ${cityUf || "—"}`, `CEP: ${t.zip_code || "—"}`,
+      ...(foreign ? [`País: ${t.country || "—"}`] : []),
       `E-mail: ${t.email || "—"}`,
       "", "SERVIÇO",
       `Código (LC 116): ${data.service.code} — ${data.service.description}`,
@@ -147,12 +150,13 @@ export function NfseDialog({ contractId, canEdit, onClose, onSaved }: { contract
                 )}
                 {note.several_parties && <p className="mb-2 text-xs text-muted-foreground">Contrato com mais de um {note.role.toLowerCase()} ({note.several_parties}): confira quem é o tomador.</p>}
                 <CopyRow label="Nome / Razão social" value={t.name} />
-                <CopyRow label="CNPJ/CPF" value={t.cnpj_cpf} />
+                <CopyRow label={docLabel} value={t.cnpj_cpf} />
                 <CopyRow label="Inscrição municipal" value={t.ins_mun} />
                 <CopyRow label="Endereço" value={address} />
                 <CopyRow label="Bairro" value={t.district} />
                 <CopyRow label="Cidade/UF" value={cityUf} />
                 <CopyRow label="CEP" value={t.zip_code} />
+                {foreign && <CopyRow label="País" value={t.country} />}
                 <CopyRow label="E-mail" value={t.email} />
               </section>
 
@@ -164,6 +168,7 @@ export function NfseDialog({ contractId, canEdit, onClose, onSaved }: { contract
                 <p className="mt-2 text-xs text-muted-foreground">
                   O código de serviço e as retenções variam por município: confirme com o contador da corretora.
                   {t.kind === "PJ" && " Tomador pessoa jurídica: verifique a retenção de IRRF (em geral 1,5% sobre comissões e corretagens)."}
+                  {foreign && " Tomador no exterior: no site da prefeitura, marque tomador estrangeiro e informe o país."}
                 </p>
               </section>
 

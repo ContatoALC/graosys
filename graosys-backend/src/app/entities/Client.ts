@@ -48,10 +48,10 @@ export class Client {
   country_code: string; // ISO 3166-1 alfa-2
 
   @Column()
-  kind: string; // PF | PJ
+  kind: string; // PF | PJ | EX (estrangeira)
 
   @Column()
-  cnpj_cpf: string;
+  cnpj_cpf: string; // vazio ou documento do país de origem quando kind = EX
 
   @Column({ nullable: true })
   ins_est: string;

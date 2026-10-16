@@ -41,15 +41,18 @@ function tomadorOf(client: Client | null, fallbackName: string, emails: string[]
     city: client?.city ?? "",
     state: client?.state ?? "",
     zip_code: client?.zip_code ?? "",
+    country: client?.country ?? "",
     email,
     phone: client?.telephone || client?.cellphone || "",
   };
   const missing: string[] = [];
   if (!client) missing.push("cadastro do cliente (a parte foi digitada sem vínculo)");
   else {
-    if (!t.cnpj_cpf) missing.push("CNPJ/CPF");
-    if (!t.address || !t.city || !t.state) missing.push("endereço");
-    if (!t.zip_code) missing.push("CEP");
+    // Tomador estrangeiro não tem CPF/CNPJ nem CEP/UF brasileiros.
+    const foreign = client.kind === "EX";
+    if (!t.cnpj_cpf && !foreign) missing.push("CNPJ/CPF");
+    if (!t.address || !t.city || (!t.state && !foreign)) missing.push("endereço");
+    if (!t.zip_code && !foreign) missing.push("CEP");
   }
   return { ...t, missing };
 }
