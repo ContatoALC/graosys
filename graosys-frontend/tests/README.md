@@ -30,7 +30,7 @@ Sem backend dá para rodar só `npm run test:public`.
 | `app/platform-tenant-delete.spec.ts` | Excluir corretora pelo Painel: só inativa/suspensa, confirmação pelo nome, apaga todos os dados e o login; a própria corretora não sai. |
 | `app/leads.spec.ts` | Lead: criar, mover de etapa, editar ficha em `/platform/leads/:id`, remover. |
 | `app/toast-confirm.spec.ts` | Avisos em toast (Sonner) e confirmações em `alertdialog` no lugar de alert()/confirm() do navegador. Nos specs: confirme com `page.getByRole("alertdialog").getByRole("button", { name: ... })`. |
-| `app/date-picker.spec.ts` | Campo de data (date picker shadcn): máscara dd/mm/aaaa, data inválida volta, calendário, Hoje e Limpar. Nos specs, datas são digitadas como `dd/mm/aaaa`. |
+| `app/date-picker.spec.ts` | Campo de data (date picker shadcn): máscara dd/mm/aaaa, data inválida volta, calendário, Hoje e Limpar; mês/ano no Select do shadcn (sem `<select>` nativo); calendário dentro de diálogo aceita clique. Nos specs, datas são digitadas como `dd/mm/aaaa`. |
 | `public/login.spec.ts` | Login, redirecionamento e recuperação de senha. |
 | `public/password-reset.spec.ts` | `/reset-password` sem token, senhas diferentes, token inválido. |
 

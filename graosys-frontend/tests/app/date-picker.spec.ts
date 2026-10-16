@@ -31,4 +31,36 @@ test.describe("Campo de data", () => {
     await page.getByRole("dialog").getByRole("button", { name: "Limpar" }).click();
     await expect(input).toHaveValue("");
   });
+
+  test("mês e ano no Select do shadcn, não no <select> do navegador", async ({ page }) => {
+    await page.goto("/contracts/new");
+    const input = page.getByLabel("Data de Emissão");
+    await input.pressSequentially("05032026");
+    await input.locator("..").getByRole("button", { name: "Abrir calendário" }).click();
+    const calendar = page.getByRole("dialog");
+    await expect(calendar.locator("select")).toHaveCount(0);
+
+    await calendar.getByRole("combobox", { name: "Escolha o mês" }).click();
+    await page.getByRole("option", { name: "agosto" }).click();
+    await calendar.getByRole("combobox", { name: "Escolha o ano" }).click();
+    await page.getByRole("option", { name: "2027" }).click();
+    await calendar.getByRole("button", { name: /12 de agosto de 2027/i }).click();
+    await expect(input).toHaveValue("12/08/2027");
+  });
+
+  test("calendário dentro de um diálogo: o clique no dia funciona e o diálogo continua aberto", async ({ page }) => {
+    // Antes, Dialog e Popover usavam cópias diferentes do Radix e o clique atravessava o calendário.
+    await page.goto("/platform");
+    await page.getByRole("button", { name: "Nova Corretora" }).click();
+    const dialog = page.getByRole("dialog", { name: "Nova corretora" });
+    const input = dialog.getByLabel("Vencimento");
+    await input.locator("..").getByRole("button", { name: "Abrir calendário" }).click();
+    await page.getByRole("combobox", { name: "Escolha o mês" }).click();
+    await page.getByRole("option", { name: "março" }).click();
+    await page.getByRole("combobox", { name: "Escolha o ano" }).click();
+    await page.getByRole("option", { name: "2027" }).click();
+    await page.getByRole("button", { name: /10 de março de 2027/i }).click();
+    await expect(input).toHaveValue("10/03/2027");
+    await expect(dialog).toBeVisible();
+  });
 });
