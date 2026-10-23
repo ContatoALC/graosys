@@ -10,3 +10,6 @@ dist/
 /playwright/.cache/
 /playwright/.auth/
 .env.e2e
+
+# Material de gravação dos vídeos tutoriais: só local, nunca vai para o GitHub
+/tutorials/
