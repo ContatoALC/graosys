@@ -35,12 +35,14 @@ const L = {
     premium: "Prêmio", exchange: "Câmbio", deadline: "Prazo para fixação", fixations: "Fixações realizadas",
     noFixations: "Nenhuma fixação lançada até o momento.", date: "Data", quantity: "Quantidade", price: "Preço",
     fixed: "Fixado", balance: "Saldo a fixar", average: "Preço médio",
+    verify: "Confira a autenticidade deste contrato", verifyHint: "Aponte a câmera do celular para o QR code ou acesse:",
   },
   en: {
     to: "to", toFix: "to be fixed", market: "To be fixed: market price on each fixation date", frame: "To be fixed (Frame)",
     premium: "Premium", exchange: "Exchange rate", deadline: "Fixation deadline", fixations: "Price fixations",
     noFixations: "No price fixations so far.", date: "Date", quantity: "Quantity", price: "Price",
     fixed: "Fixed", balance: "Balance to fix", average: "Average price",
+    verify: "Check the authenticity of this contract", verifyHint: "Scan the QR code with your phone camera or go to:",
   },
 };
 
@@ -202,6 +204,34 @@ export async function getPdfFixations(tenantId: string, contract: GrainContract)
   });
 }
 
+// Página pública que confere o contrato no sistema (o id é um UUID, impossível de adivinhar).
+// Sem FRONTEND_URL em produção não há endereço para apontar: o PDF sai sem o QR code.
+export function contractVerificationUrl(contract: GrainContract): string | null {
+  const frontendUrl = (process.env.FRONTEND_URL || (process.env.NODE_ENV === "production" ? "" : "http://localhost:5173")).replace(/\/+$/, "");
+  return frontendUrl ? `${frontendUrl}/verificar/${contract.id}` : null;
+}
+
+function verificationSection(contract: GrainContract, lang: TemplateLanguage): any[] {
+  const url = contractVerificationUrl(contract);
+  if (!url) return [];
+  return [{
+    unbreakable: true,
+    margin: [0, 32, 0, 0],
+    columns: [
+      { qr: url, fit: 72, width: "auto" },
+      {
+        width: "*",
+        margin: [10, 14, 0, 0],
+        stack: [
+          { text: L[lang].verify, bold: true },
+          { text: L[lang].verifyHint, color: "#555555", fontSize: 8, margin: [0, 2, 0, 0] },
+          { text: url, color: "#555555", fontSize: 8, link: url },
+        ],
+      },
+    ],
+  }];
+}
+
 export async function generateContractPdf(
   contract: GrainContract,
   tenant: Tenant,
@@ -264,6 +294,7 @@ export async function generateContractPdf(
             columns: template.signatures.map((s) => ({ text: `______________________________\n${s}`, alignment: "center", color: "#555555" })),
           }]
         : []),
+      ...verificationSection(contract, lang),
     ],
     styles: {
       title: { fontSize: 16, bold: true },

@@ -19,6 +19,7 @@ import { PlatformController } from "../controllers/PlatformController";
 import { EmailController } from "../controllers/EmailController";
 import { LookupController } from "../controllers/LookupController";
 import { BrokerPortalController } from "../controllers/BrokerPortalController";
+import { ContractVerificationController } from "../controllers/ContractVerificationController";
 
 const router = Router();
 const session = new SessionController();
@@ -40,11 +41,13 @@ const emailSettings = new EmailSettingsController();
 const broker = new BrokerController();
 const lookup = new LookupController();
 const brokerPortal = new BrokerPortalController();
+const contractVerification = new ContractVerificationController();
 
 // Público
 router.post("/api/auth/login", session.login);
 router.post("/api/auth/forgot-password", session.forgotPassword);
 router.post("/api/auth/reset-password-token", session.resetPasswordWithToken);
+router.get("/api/public/contracts/:id/verify", contractVerification.verify);
 
 // Protegido (requer JWT)
 router.use(authMiddleware);

@@ -27,6 +27,7 @@ export const ROUTES: AppRoute[] = [
   { path: "/login", public: true },
   { path: "/forgot-password", public: true },
   { path: "/reset-password", public: true },
+  { path: "/verificar/:id", public: true, coveredBy: "tests/app/contract-verification.spec.ts" },
 
   // App
   { path: "/", redirectsTo: "/dashboard" },

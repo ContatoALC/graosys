@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LoginPage } from "@/pages/Login";
 import { ForgotPasswordPage, ResetPasswordPage } from "@/pages/PasswordReset";
+import { ContractVerificationPage } from "@/pages/ContractVerification";
 import { DashboardPage } from "@/pages/Dashboard";
 import { ContractsPage } from "@/pages/Contracts";
 import { ContractFormPage } from "@/pages/Contracts/ContractForm";
@@ -68,6 +69,7 @@ export function AppRoutes() {
       <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
       <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPasswordPage /></PublicOnlyRoute>} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/verificar/:id" element={<ContractVerificationPage />} />
       <Route path="/" element={<PrivateRoute><AppLayout /></PrivateRoute>}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
